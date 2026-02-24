@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException, status , Depends
-from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.logger import setup_logging, get_logger
 
@@ -35,6 +34,9 @@ setup_logging()
 # Logger call example
 #logger = get_logger(__name__)
 
+
+
+
 @app.get("/")
 def root():
     """Root endpoint"""
@@ -47,6 +49,14 @@ def root():
         "docs": "/docs",
         "redoc": "/redoc"
     }
+
+@app.get("/health")
+def root():
+    """health endpoint"""
+    return {
+        "message": "ok"
+    }
+
 #Base de datos de prueba
 
 # CARGA INICIAL DE USUARIOS (SEED)
