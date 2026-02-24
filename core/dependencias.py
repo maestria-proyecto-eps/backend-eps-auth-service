@@ -20,11 +20,11 @@ def get_usuario_actual(token: str = Depends(end_protegido),db: Session = Depends
 
         # Extraer información del token
         id_usuario: int = datos.get("id_usuario")
-        username: str = datos.get("username")
+        documento: int = datos.get("documento")
         id_role: int = datos.get("id_role")
 
         # validación de información existente
-        if username is None or id_usuario is None or id_role is None:
+        if documento is None or id_usuario is None or id_role is None:
             raise HTTPException(status_code=401, detail="Token inválido")
 
         user = db.query(User).filter(User.id_usuario == id_usuario).first()
@@ -36,5 +36,5 @@ def get_usuario_actual(token: str = Depends(end_protegido),db: Session = Depends
         return user
 
     except JWTError:
-        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+        raise HTTPException(status_code=401, detail="Token expirado")
 

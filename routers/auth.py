@@ -17,7 +17,7 @@ router = APIRouter(
 @router.post("/login", response_model=APIResponse[TokenResponse])
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     # Datos de usuario
-    user_db = db.query(User).filter(User.username == payload.username).first()
+    user_db = db.query(User).filter(User.documento == payload.documento).first()
 
     # Validamos que exista
     if not user_db:
@@ -27,8 +27,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
     # Bloqueo de 15 min
     if user_db.intentos_login >= 5:
-        if user_db.hora_intento and ahora < user_db.hora_intento + timedelta(minutes=15):
-            tiempo_restante = (user_db.hora_intento + timedelta(minutes=15)) - ahora
+        if user_db.tiempo_de_fallo_login and ahora < user_db.tiempo_de_fallo_login + timedelta(minutes=15):
+            tiempo_restante = (user_db.tiempo_de_fallo_login + timedelta(minutes=15)) - ahora
             minutos_espera = int(tiempo_restante.total_seconds() // 60)
             return {
                 "hasError": True,
@@ -41,21 +41,21 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             db.commit()
 
     # Reinicio después de 10 min
-    if 0 < user_db.intentos_login < 5 and user_db.hora_intento:
-        if ahora > user_db.hora_intento + timedelta(minutes=10):
+    if 0 < user_db.intentos_login < 5 and user_db.tiempo_de_fallo_login:
+        if ahora > user_db.tiempo_de_fallo_login + timedelta(minutes=10):
             user_db.intentos_login = 0
 
 
     # Validar usuario y contraseña en base de datos
-    if payload.username != user_db.username or not verificar_pwd(payload.password, get_pwd_hash(user_db.password)):
+    if payload.documento != user_db.documento or not verificar_pwd(payload.password, get_pwd_hash(user_db.password)):
         # Si falla se establece hora de primer intento
         if user_db.intentos_login == 0:
-            user_db.hora_intento = ahora
+            user_db.tiempo_de_fallo_login = ahora
         user_db.intentos_login += 1
 
         # Este error fue el número 5, activamos el reloj de los 15 min último intento
         if user_db.intentos_login >= 5:
-            user_db.hora_intento = ahora # El reloj ahora marca el inicio del bloqueo
+            user_db.tiempo_de_fallo_login = ahora # El reloj ahora marca el inicio del bloqueo
             mensaje = "Límite superado. Cuenta bloqueada por 15 min."
         else:
             mensaje = f"Credenciales incorrectas. Intento {user_db.intentos_login} de 5."
@@ -76,13 +76,13 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         }
     # Limpiamos si sale bien
     user_db.intentos_login = 0
-    user_db.ultimo_intento = None
+    user_db.tiempo_de_fallo_login = None
     db.commit()
 
     # Datos para el token
     token_data = {
         "id_usuario": user_db.id_usuario,
-        "username": user_db.username,
+        "documento": user_db.documento,
         "id_role": user_db.id_rol
     }
     #Se crea el token y se verifica el formato de la información
@@ -92,8 +92,6 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         "Message": "Login exitoso",
         "Data": {"access_token": token,"token_type": "bearer"}
     }
-
-# ETAPA DE PRUEBA (2)
 
 # Endpoint PROTEGIDO para acceder a información de usuario
 @router.get("/me", response_model=APIResponse[UserResponse])
@@ -111,6 +109,6 @@ def logout(current_user: TokenData = Depends(get_usuario_actual)):
     # Mensaje de cierre de sesión
     return {
         "hasError": False,
-        "Message": f"Sesión de {current_user.username} finalizada correctamente.",
+        "Message": f"Sesión de {current_user.nombre} finalizada correctamente.",
         "Data": None
     }

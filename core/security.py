@@ -23,7 +23,7 @@ def crear_token_acceso(data: dict):
     to_encode = datos.copy()
 
     # Determina a qué hora vence el token
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRES_MINUTES)
+    expire = datetime.now() + timedelta(minutes=settings.JWT_EXPIRES_MINUTES)
 
     # Fija la hora de expiración
     to_encode.update({"exp": expire})

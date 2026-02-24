@@ -70,16 +70,22 @@ def seed_users():
 
             usuarios_prueba = [
                 User(
-                    username="oscar_admin",
+                    nombre="Oscar",
+                    id_usuario=1,
+                    documento=1001218001,
                     password="EPS_2026_Clave",
                     id_rol=1,
-                    estado=1
+                    estado=1,
+                    intentos_login=0
                 ),
                 User(
-                    username="manuel",
+                    nombre="manuel",
+                    id_usuario=2,
+                    documento=100000000,
                     password="paciente123",
                     id_rol=2,
-                    estado=0
+                    estado=0,
+                    intentos_login=0
                 )
             ]
 
