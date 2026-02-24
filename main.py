@@ -106,5 +106,3 @@ seed_users()
 
 # rutas de autenticación
 app.include_router(auth.router)
-
-
