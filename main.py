@@ -2,6 +2,9 @@ from fastapi import FastAPI, HTTPException, status , Depends
 from fastapi.middleware.cors import CORSMiddleware
 from core.logger import setup_logging, get_logger
 
+# Hash para pwd de pruebas
+from core.security import Security
+
 # Rutas de loggin
 from routers import auth
 
@@ -70,28 +73,40 @@ def seed_users():
 
             usuarios_prueba = [
                 User(
-                    nombre="Oscar",
+                    nombres="Juan Sebastián",
+                    apellidos="Martínez López",
                     id_usuario=1,
-                    documento=1001218001,
-                    password="EPS_2026_Clave",
+                    num_documento=1234567890,
+                    password=Security.get_pwd_hash("EPS_2026_Clave"),
                     id_rol=1,
                     estado=1,
                     intentos_login=0
                 ),
                 User(
-                    nombre="manuel",
+                    nombres="María Fernanda",
+                    apellidos="González Rojas",
                     id_usuario=2,
-                    documento=100000000,
-                    password="paciente123",
+                    num_documento=12345678901,
+                    password=Security.get_pwd_hash("paciente123"),
                     id_rol=2,
                     estado=0,
+                    intentos_login=0
+                ),
+                User(
+                    nombres="Carlos Andrés",
+                    apellidos="Ramírez Torres",
+                    id_usuario=3,
+                    num_documento=12345678902,
+                    password=Security.get_pwd_hash("paciente1234"),
+                    id_rol=3,
+                    estado=1,
                     intentos_login=0
                 )
             ]
 
             db.add_all(usuarios_prueba)
             db.commit()
-            print("Base de Datos: Usuarios 'oscar_admin' y 'paco_paciente' creados exitosamente.")
+            print("Base de Datos: Usuarios creados exitosamente.")
         else:
             print(f"Base de Datos: Ya existen {user_count} usuarios. Seed omitido.")
 

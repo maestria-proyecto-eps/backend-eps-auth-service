@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from shemas.auth import LoginRequest, TokenResponse, TokenData, APIResponse,UserResponse
-from core.security import verificar_pwd, crear_token_acceso, get_pwd_hash
+from core.security import Security, crear_token_acceso
 from core.dependencias import get_usuario_actual
 from sqlalchemy.orm import Session
 from db.session import get_db
@@ -17,11 +17,11 @@ router = APIRouter(
 @router.post("/login", response_model=APIResponse[TokenResponse])
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     # Datos de usuario
-    user_db = db.query(User).filter(User.documento == payload.documento).first()
+    user_db = db.query(User).filter(User.num_documento == payload.num_documento).first()
 
     # Validamos que exista
     if not user_db:
-        return {"hasError": True, "Message": "Usuario no encontrado", "Data": None}
+        return {"hasError": True, "Message": "Credenciales incorrectas.", "Data": None}
 
     ahora = datetime.now()
 
@@ -47,7 +47,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
 
     # Validar usuario y contraseña en base de datos
-    if payload.documento != user_db.documento or not verificar_pwd(payload.password, get_pwd_hash(user_db.password)):
+    if payload.num_documento != user_db.num_documento or not Security.verify_password(payload.password, user_db.password):
         # Si falla se establece hora de primer intento
         if user_db.intentos_login == 0:
             user_db.tiempo_de_fallo_login = ahora
@@ -67,6 +67,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             "Message":  mensaje,
             "Data": None
         }
+
     # LOGIN EXITOSO
     if user_db.estado == 0:
         return {
@@ -82,7 +83,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     # Datos para el token
     token_data = {
         "id_usuario": user_db.id_usuario,
-        "documento": user_db.documento,
+        "num_documento": user_db.num_documento,
         "id_role": user_db.id_rol
     }
     #Se crea el token y se verifica el formato de la información
@@ -105,10 +106,10 @@ def get_me(usuario_actual: User = Depends(get_usuario_actual)):
 
 # Endpoint PROTEGIDO para cerrar sesión
 @router.post("/logout", response_model=APIResponse[None])
-def logout(current_user: TokenData = Depends(get_usuario_actual)):
+def logout(current_user: User = Depends(get_usuario_actual)):
     # Mensaje de cierre de sesión
     return {
         "hasError": False,
-        "Message": f"Sesión de {current_user.nombre} finalizada correctamente.",
+        "Message": f"Sesión de {current_user.nombres} {current_user.apellidos} finalizada correctamente.",
         "Data": None
     }

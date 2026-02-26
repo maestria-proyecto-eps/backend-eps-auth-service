@@ -1,15 +1,32 @@
-# Librearia para encriptado
-from passlib.context import CryptContext
+# Librearia para hash
+import bcrypt
 #Para crear Tokens
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from jose import jwt
 #Para garantizar el formato de los datos en token
 from shemas.auth import TokenData
 #  Para leer archivo .env
 from core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"],deprecated="auto",bcrypt__rounds=12) #Hash con bcrypt y 12 repeticiones
+class Security:
 
+    @staticmethod
+    def verify_password(password: str, hashed_password: str) -> bool:
+        if not password or not hashed_password:
+            return False
+
+        return bcrypt.checkpw(
+            password.encode("utf-8"),
+            hashed_password.encode("utf-8")
+        )
+
+    @staticmethod
+    def get_pwd_hash(password: str) -> str:
+        # Generar hash
+        salt = bcrypt.gensalt(rounds=12)
+        hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+        # Retorna como string
+        return hashed.decode("utf-8")
 
 
 def crear_token_acceso(data: dict):
@@ -31,9 +48,5 @@ def crear_token_acceso(data: dict):
 
     return encoded_jwt
 
-def verificar_pwd(pwd_plano, pwd_hashed):
-    return pwd_context.verify(pwd_plano, pwd_hashed) #Hace hash con el primer arg y compara con el 2do
-def get_pwd_hash(pwd):
-    return pwd_context.hash(pwd) #Crea hash
 
 

@@ -2,13 +2,13 @@ from pydantic import BaseModel, ConfigDict
 from typing import Generic, TypeVar, Optional, List, Any
 # Formato de datos en el Loggin
 class LoginRequest(BaseModel):
-    documento: int
+    num_documento: int
     password: str
 
 # Formato de los datos de usuario
 class TokenData(BaseModel):
     id_usuario: int
-    documento: int
+    num_documento: int
     id_role: int
 
 # Formato del token
@@ -37,12 +37,13 @@ class APIPaginatedResponse(BaseModel, Generic[T]):
     Message: str = "Todo Ok"
     Data: PaginacionResponse[T]
 
+# Datos básicos cualquier usuario
 class UserResponse(BaseModel):
     id_usuario: int
-    nombre: str
-    documento: int
+    num_documento: int
     id_rol: int
     estado: int
-    #Se quita pwd por seguridad
+    nombres: str
+    apellidos: str
 
     model_config = ConfigDict(from_attributes=True)
