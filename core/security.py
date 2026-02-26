@@ -35,8 +35,6 @@ def crear_token_acceso(data: dict):
     user_data = TokenData(**data)
     datos = user_data.model_dump()
 
-
-    #datos.pop("estado", None)       #NO SE USA EN EL TOKEN
     to_encode = datos.copy()
 
     # Determina a qué hora vence el token
