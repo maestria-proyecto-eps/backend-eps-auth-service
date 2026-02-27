@@ -10,6 +10,7 @@ class TokenData(BaseModel):
     id_usuario: int
     num_documento: int
     id_role: int
+    role: str
 
 # Formato del token
 class TokenResponse(BaseModel):
@@ -43,6 +44,7 @@ class UserResponse(BaseModel):
     num_documento: int
     id_rol: int
     estado: int
+    role: str
     nombres: str
     apellidos: str
 

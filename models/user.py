@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, SmallInteger, TIMESTAMP, BigInte
 from db.session import Base
 
 
-class User(Base):
+class USUARIOS(Base):
 
     __tablename__ = "usuarios"
 
@@ -14,5 +14,3 @@ class User(Base):
     estado = Column(SmallInteger, default=1) # 1: Activo, 0: Inactivo
     intentos_login = Column(Integer, default=0)
     tiempo_de_fallo_login = Column(TIMESTAMP, nullable=True)
-    nombres = Column(String(50), unique=True, nullable=False, index=True)
-    apellidos = Column(String(100), nullable=False)
