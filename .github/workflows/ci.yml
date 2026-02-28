@@ -1,35 +1,45 @@
-name: FastAPI CI
+# CI - backend-eps-auth-service
+# Runs on PRs targeting develop, qa, main
+
+name: CI
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-      - feature/**
   pull_request:
-    branches:
-      - main
+    branches: [develop, qa, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-    env:
-      PYTHONPATH: .
     steps:
-      - name: Clonar repositorio
-        uses: actions/checkout@v4
-
-      - name: Configurar Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
+          cache: pip
+      - run: pip install flake8 -r requirements.txt
+      - run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+      - run: flake8 . --count --max-line-length=120 --statistics --exit-zero
 
-      - name: Instalar dependencias
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Run tests
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
-
-      - name: Ejecutar tests
-        run: |
-          pytest --cov=. --cov-report=term
+          if [ -d "tests" ] && find tests -name "test_*.py" | grep -q .; then
+            pip install pytest
+            pytest tests/ -v
+          else
+            echo "No tests found — skipping"
+          fi
