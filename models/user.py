@@ -14,3 +14,9 @@ class USUARIOS(Base):
     estado = Column(SmallInteger, default=1) # 1: Activo, 0: Inactivo
     intentos_login = Column(Integer, default=0)
     tiempo_de_fallo_login = Column(TIMESTAMP, nullable=True)
+
+class ROLES(Base):
+    __tablename__ = "roles"
+
+    id_rol = Column(Integer, primary_key=True, index=True)
+    nombre_rol = Column(String(50), nullable=False, unique=True)

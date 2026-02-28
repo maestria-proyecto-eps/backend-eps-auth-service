@@ -16,23 +16,29 @@ class PACIENTES(Base):
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"))
 
 class FARMACEUTA(Base):
-    __tablename__ = "Farmaceuta"
+    __tablename__ = "farmaceutas"
     id_farmaceuta = Column(BigInteger, primary_key=True)
     nombres = Column(String(50))
     apellidos = Column(String(50))
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"))
 
 class ENFERMEROS(Base):
-    __tablename__ = "Enfermeros"
+    __tablename__ = "enfermeros"
     id_enfermero = Column(BigInteger, primary_key=True)
     nombres = Column(String(50))
     apellidos = Column(String(50))
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"))
 
 class TALENTO_HUMANO(Base):
-    __tablename__ = "Talento Humano"
-    id_TH = Column(BigInteger, primary_key=True)
+    __tablename__ = "talento_humano"
+    id_th = Column(BigInteger, primary_key=True)
     nombres = Column(String(50))
     apellidos = Column(String(50))
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"))
 
+class RECEPCIONISTAS(Base):
+    __tablename__ = "recepcionistas" # Tabla nueva descubierta
+    id_recepcionista = Column(BigInteger, primary_key=True)
+    nombres = Column(String(50))
+    apellidos = Column(String(50))
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"))

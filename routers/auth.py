@@ -4,8 +4,8 @@ from core.security import Security, crear_token_acceso
 from core.dependencias import get_usuario_actual
 from sqlalchemy.orm import Session
 from db.session import get_db
-from models.user import USUARIOS
-from models.profiles import MEDICOS,PACIENTES,FARMACEUTA,ENFERMEROS,TALENTO_HUMANO
+from models.user import USUARIOS,  ROLES
+from models.profiles import MEDICOS,PACIENTES,FARMACEUTA,ENFERMEROS,TALENTO_HUMANO, RECEPCIONISTAS
 
 from datetime import datetime, timedelta, timezone
 
@@ -82,14 +82,9 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user_db.tiempo_de_fallo_login = None
     db.commit()
 
-    mapeo_roles = {
-        1: "Médico",
-        2: "Paciente",
-        3: "Farmaceuta",
-        4: "Enfermero",
-        5: "Talento Humano"
-    }
-    nombre_role = mapeo_roles.get(user_db.id_rol, "Usuario") #Defult Usuario
+
+    rol_db = db.query(ROLES).filter(ROLES.id_rol == user_db.id_rol).first()
+    nombre_role = rol_db.nombre_rol if rol_db else "Recepcionista"
     # Datos para el token
     token_data = {
         "id_usuario": user_db.id_usuario,
@@ -109,20 +104,15 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=APIResponse[UserResponse])
 def get_me(usuario_actual: USUARIOS = Depends(get_usuario_actual),db: Session = Depends(get_db)):
 
-    mapeo_roles = {
-        1: "Médico",
-        2: "Paciente",
-        3: "Farmaceuta",
-        4: "Enfermero",
-        5: "Talento Humano"
-    }
-    nombre_role = mapeo_roles.get(usuario_actual.id_rol, "Usuario") #Defult Usuario
+    rol_db = db.query(ROLES).filter(ROLES.id_rol == usuario_actual.id_rol).first()
+    nombre_role = rol_db.nombre_rol if rol_db else "Recepcionista"
     perfiles = {
-        1: MEDICOS,
-        2: PACIENTES,
-        3: FARMACEUTA,
+        2: MEDICOS,
+        3: PACIENTES,
         4: ENFERMEROS,
-        5: TALENTO_HUMANO
+        5: FARMACEUTA,
+        6: RECEPCIONISTAS,
+        7: TALENTO_HUMANO
     }
     perfil_clase = perfiles.get(usuario_actual.id_rol)
     nombres, apellidos = "Desconocido", "Desconocido"
@@ -150,11 +140,12 @@ def get_me(usuario_actual: USUARIOS = Depends(get_usuario_actual),db: Session = 
 @router.post("/logout", response_model=APIResponse[None])
 def logout(current_user: USUARIOS = Depends(get_usuario_actual),db: Session = Depends(get_db)):
     perfiles = {
-        1: MEDICOS,
-        2: PACIENTES,
-        3: FARMACEUTA,
+        2: MEDICOS,
+        3: PACIENTES,
         4: ENFERMEROS,
-        5: TALENTO_HUMANO
+        5: FARMACEUTA,
+        6: RECEPCIONISTAS,
+        7: TALENTO_HUMANO
     }
     perfil_clase = perfiles.get(current_user.id_rol)
     nombre_completo = "Usuario"
@@ -168,3 +159,35 @@ def logout(current_user: USUARIOS = Depends(get_usuario_actual),db: Session = De
         "Message": f"Sesión de {nombre_completo} finalizada correctamente.",
         "Data": None
     }
+
+@router.post("/reset-attempts", response_model=APIResponse[None])
+def reset_user_attempts(payload: LoginRequest, db: Session = Depends(get_db)):
+
+    # Buscar al usuario por documento
+    user_db = db.query(USUARIOS).filter(USUARIOS.num_documento == payload.num_documento).first()
+
+    if not user_db:
+        return {
+            "hasError": True,
+            "Message": "Usuario no encontrado.",
+            "Data": None
+        }
+
+    # Reiniciar valores de bloqueo
+    user_db.intentos_login = 0
+    user_db.tiempo_de_fallo_login = None
+
+    try:
+        db.commit()
+        return {
+            "hasError": False,
+            "Message": f"Intentos reiniciados para el documento {payload.num_documento}.",
+            "Data": None
+        }
+    except Exception as e:
+        db.rollback()
+        return {
+            "hasError": True,
+            "Message": f"Error al reiniciar: {str(e)}",
+            "Data": None
+        }
