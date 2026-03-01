@@ -13,6 +13,7 @@ os.environ["dbname"] = "postgres"
 os.environ["JWT_SECRET"] = "clave_secreta"
 os.environ["JWT_ALGORITHM"] = "HS256"
 os.environ["JWT_EXPIRES_MINUTES"] = "480"
+
 from main import app
 
 client = TestClient(app)
