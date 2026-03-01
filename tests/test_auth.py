@@ -4,15 +4,6 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
-
-TEST_DB_PATH = ROOT_DIR / "test_auth.db"
-if TEST_DB_PATH.exists():
-    TEST_DB_PATH.unlink()
-
-
 os.environ["user"] = "postgres.rhozelgowvxrhifghklq"
 os.environ["password"] = "CuidarteEPS123$$"
 os.environ["host"] = "aws-1-us-east-1.pooler.supabase.com"
