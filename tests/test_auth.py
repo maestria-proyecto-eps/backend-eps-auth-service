@@ -4,11 +4,11 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-os.environ["user"] = "postgres.rhozelgowvxrhifghklq"
-os.environ["password"] = "CuidarteEPS123$$"
-os.environ["host"] = "aws-1-us-east-1.pooler.supabase.com"
-os.environ["port"] = "5432"
-os.environ["dbname"] = "postgres"
+os.environ["DB_ADMIN_USER"] = "postgres.rhozelgowvxrhifghklq"
+os.environ["DB_ADMIN_PASSWORD"] = "CuidarteEPS123$$"
+os.environ["DB_ADMIN_HOST"] = "aws-1-us-east-1.pooler.supabase.com"
+os.environ["DB_ADMIN_PORT"] = "5432"
+os.environ["DB_ADMIN_NAME"] = "postgres"
 
 os.environ["JWT_SECRET"] = "clave_secreta"
 os.environ["JWT_ALGORITHM"] = "HS256"
