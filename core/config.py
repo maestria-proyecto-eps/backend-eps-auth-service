@@ -2,11 +2,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Variables de Base de Datos
-    user: str
-    password: str
-    host: str
-    port: int = 5432
-    dbname: str
+    DB_ADMIN_USER: str
+    DB_ADMIN_PASSWORD: str
+    DB_ADMIN_HOST: str
+    DB_ADMIN_PORT: int = 5432
+    DB_ADMIN_NAME: str
 
     # Variables de JWT
     JWT_SECRET: str

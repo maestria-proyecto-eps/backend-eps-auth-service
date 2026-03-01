@@ -7,11 +7,11 @@ import os
 # Cargar las variables del archivo .env
 load_dotenv()
 
-USER = os.getenv("user")
-PASSWORD = os.getenv("password")
-HOST = os.getenv("host")
-PORT = os.getenv("port")
-DBNAME = os.getenv("dbname")
+USER = os.getenv("DB_ADMIN_USER")
+PASSWORD = os.getenv("DB_ADMIN_PASSWORD")
+HOST = os.getenv("DB_ADMIN_HOST")
+PORT = os.getenv("DB_ADMIN_PORT")
+DBNAME = os.getenv("DB_ADMIN_NAME")
 
 # Construcción de la URL con SSL requerido para Supabase
 DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
