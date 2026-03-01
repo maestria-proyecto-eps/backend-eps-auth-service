@@ -4,6 +4,10 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 os.environ["DB_ADMIN_USER"] = "postgres.rhozelgowvxrhifghklq"
 os.environ["DB_ADMIN_PASSWORD"] = "CuidarteEPS123$$"
 os.environ["DB_ADMIN_HOST"] = "aws-1-us-east-1.pooler.supabase.com"
