@@ -1,8 +1,10 @@
 from sqlalchemy import Column, Integer, String, SmallInteger, TIMESTAMP, BigInteger
-from db.session import Base
+from sqlalchemy.orm import declarative_base
+
+AuthBase = declarative_base()
 
 
-class USUARIOS(Base):
+class USUARIOS(AuthBase):
 
     __tablename__ = "usuarios"
 
@@ -15,7 +17,7 @@ class USUARIOS(Base):
     intentos_login = Column(Integer, default=0)
     tiempo_de_fallo_login = Column(TIMESTAMP, nullable=True)
 
-class ROLES(Base):
+class ROLES(AuthBase):
     __tablename__ = "roles"
 
     id_rol = Column(Integer, primary_key=True, index=True)
