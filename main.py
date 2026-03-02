@@ -7,6 +7,7 @@ from core.security import Security
 
 # Rutas de loggin
 from routers import auth
+from routers import patients
 
 # Importaciones de Base de Datos
 from db.session import SessionLocal, engine, Base,get_db
@@ -58,4 +59,5 @@ def root():
 
 # rutas de autenticación
 app.include_router(auth.router)
+app.include_router(patients.router)
 
