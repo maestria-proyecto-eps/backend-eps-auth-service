@@ -1,19 +1,25 @@
 import os
-from datetime import datetime
+from datetime import date
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 os.environ.setdefault("DB_URL", "sqlite:///./pytest_bootstrap.db")
+os.environ.setdefault("DB_ADMIN_USER", "test")
+os.environ.setdefault("DB_ADMIN_PASSWORD", "test")
+os.environ.setdefault("DB_ADMIN_HOST", "localhost")
+os.environ.setdefault("DB_ADMIN_PORT", "5432")
+os.environ.setdefault("DB_ADMIN_NAME", "test")
 os.environ.setdefault("JWT_EXPIRES_MINUTES", "60")
 os.environ.setdefault("JWT_SECRET", "test-secret")
 os.environ.setdefault("JWT_ALGORITHM", "HS256")
 
-from app.main import app
-from app.models import Base, Paciente, Role, Usuario
+from models import Base, Paciente, Recepcionista, Role, Usuario
+from routers import patients as patients_router
 from db.session import get_db
 
 TEST_DATABASE_URL = "sqlite://"
@@ -33,8 +39,31 @@ def _seed_roles(db):
         Role(id_rol=3, nombre_rol="farmaceuta"),
         Role(id_rol=4, nombre_rol="enfermero"),
         Role(id_rol=5, nombre_rol="talento_humano"),
+        Role(id_rol=6, nombre_rol="recepcionista"),
     ]
     db.add_all(roles)
+    db.commit()
+
+
+def _seed_receptionist(db):
+    usuario = Usuario(
+        num_documento=9000000001,
+        password="hashed-password",
+        fk_id_rol=6,
+        estado=1,
+        intentos_login=0,
+    )
+    db.add(usuario)
+    db.flush()
+
+    recepcionista = Recepcionista(
+        id_recepcionista=52991334,
+        nombres="Recepcion",
+        apellidos="Prueba",
+        estado=1,
+        id_usuario=usuario.id_usuario,
+    )
+    db.add(recepcionista)
     db.commit()
 
 
@@ -43,7 +72,7 @@ def create_patient_record(
     *,
     num_documento: int,
     email: str,
-    estado: str = "Activo",
+    estado: int = 1,
     nombres: str = "Paciente",
     apellidos: str = "Prueba",
     direccion: str = "Calle 1 # 2-3",
@@ -57,27 +86,29 @@ def create_patient_record(
         num_documento=num_documento,
         password="hashed-password",
         fk_id_rol=2,
-        estado="activo",
+        estado=1,
         intentos_login=0,
     )
     db.add(usuario)
     db.flush()
 
     paciente = Paciente(
+        id_paciente=num_documento,
         nombres=nombres,
         apellidos=apellidos,
         estado=estado,
         consentimiento_datos=True,
         num_afiliacion=num_afiliacion,
         genero="Femenino",
-        fecha_nacimiento=datetime(1990, 5, 15),
+        fecha_nac=date(1990, 5, 15),
         direccion=direccion,
         contacto_emergencia=contacto_emergencia,
         telefono_emergencia=telefono_emergencia,
         grupo_sanguineo=grupo_sanguineo,
         factor_RH=factor_rh,
         email=email,
-        fk_id_usuario=usuario.id_usuario,
+        id_recepcionista=52991334,
+        id_usuario=usuario.id_usuario,
     )
     db.add(paciente)
     db.commit()
@@ -91,6 +122,7 @@ def db_session():
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
     _seed_roles(session)
+    _seed_receptionist(session)
     try:
         yield session
     finally:
@@ -99,6 +131,9 @@ def db_session():
 
 @pytest.fixture(scope="function")
 def client(db_session):
+    app = FastAPI()
+    app.include_router(patients_router.router)
+
     def override_get_db():
         db = TestingSessionLocal()
         try:

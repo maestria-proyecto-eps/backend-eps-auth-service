@@ -1,4 +1,4 @@
-from app.models import Paciente, Usuario
+from models import Paciente, Usuario
 from tests.conftest import create_patient_record
 
 
@@ -10,7 +10,7 @@ def build_patient_payload(suffix: int = 1):
         "apellidos": "Diaz",
         "email": f"camila{suffix}@example.com",
         "genero": "Femenino",
-        "fecha_nacimiento": "1990-05-15T00:00:00",
+        "fecha_nac": "1990-05-15",
         "direccion": "Calle 10 #20-30, Apto 301",
         "contacto_emergencia": "Carlos Diaz",
         "telefono_emergencia": 3001234500 + suffix,
@@ -29,7 +29,7 @@ def test_create_patient_creates_user_and_patient(client, db_session):
     assert body["nombres"] == "Camila1"
     assert body["apellidos"] == "Diaz"
     assert body["email"] == "camila1@example.com"
-    assert body["estado"] == "Activo"
+    assert body["estado"] == 1
     assert body["consentimiento_datos"] is True
     assert isinstance(body["num_afiliacion"], int)
 
@@ -37,7 +37,7 @@ def test_create_patient_creates_user_and_patient(client, db_session):
     user = db_session.query(Usuario).filter(Usuario.num_documento == 1010000001).first()
     assert patient is not None
     assert user is not None
-    assert patient.fk_id_usuario == user.id_usuario
+    assert patient.id_usuario == user.id_usuario
 
 
 def test_create_patient_requires_data_consent(client):
@@ -55,18 +55,18 @@ def test_list_patients_filters_by_estado(client, db_session):
         db_session,
         num_documento=2000000001,
         email="activo@example.com",
-        estado="Activo",
+        estado=1,
         num_afiliacion=2026022800001,
     )
     create_patient_record(
         db_session,
         num_documento=2000000002,
         email="inactivo@example.com",
-        estado="Inactivo",
+        estado=2,
         num_afiliacion=2026022800002,
     )
 
-    response = client.get("/api/patients", params={"estado": "Activo"})
+    response = client.get("/api/patients", params={"estado": 1})
 
     assert response.status_code == 200
     body = response.json()
@@ -74,7 +74,7 @@ def test_list_patients_filters_by_estado(client, db_session):
     assert body["total"] == 1
     assert len(body["patients"]) == 1
     assert body["patients"][0]["id_paciente"] == active_patient.id_paciente
-    assert body["patients"][0]["estado"] == "Activo"
+    assert body["patients"][0]["estado"] == 1
 
 
 def test_update_affiliation_status_changes_patient_state(client, db_session):
@@ -82,17 +82,17 @@ def test_update_affiliation_status_changes_patient_state(client, db_session):
         db_session,
         num_documento=2000000010,
         email="estado@example.com",
-        estado="Activo",
+        estado=1,
         num_afiliacion=2026022800010,
     )
 
     response = client.put(
         f"/api/patients/{patient.id_paciente}/affiliation-status",
-        json={"estado": "Suspendido", "motivo": "Pago no realizado"},
+        json={"estado": 3, "motivo": "Pago no realizado"},
     )
 
     assert response.status_code == 200
-    assert response.json()["estado"] == "Suspendido"
+    assert response.json()["estado"] == 3
 
 
 def test_get_my_profile_returns_patient_data(client, db_session):
