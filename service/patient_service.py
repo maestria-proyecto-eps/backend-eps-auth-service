@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, text, cast, String
 from fastapi import HTTPException, status
-from passlib.context import CryptContext
+from core.security import Security
 
 from models import Usuario, Paciente, Role
 from schemas.patients import PacienteCreate, AffiliationStatusUpdate
@@ -16,8 +16,6 @@ from schemas.patients import PacienteCreate, AffiliationStatusUpdate
 
 class PatientService:
     """Service class for patient operations"""
-
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
     @staticmethod
     def generate_affiliation_number(db: Session) -> int:
@@ -60,8 +58,8 @@ class PatientService:
     
     @staticmethod
     def hash_password(password: str) -> str:
-        """Hash password using bcrypt."""
-        return PatientService.pwd_context.hash(password)
+        """Hash password using project security helper."""
+        return Security.get_pwd_hash(password)
     
     @staticmethod
     def create_patient(db: Session, patient_data: PacienteCreate) -> Paciente:
