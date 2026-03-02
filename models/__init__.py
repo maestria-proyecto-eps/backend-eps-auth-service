@@ -17,7 +17,7 @@ from sqlalchemy import (
     Table,
     Text,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, synonym
 from db.session import Base
 
 
@@ -63,6 +63,9 @@ class Usuario(Base):
     intentos_login = Column(SmallInteger, default=0)
     tiempo_da_fallo_login = Column("tiempo_de_fallo_login", DateTime, nullable=True)
 
+    id_rol = synonym("fk_id_rol")
+    tiempo_de_fallo_login = synonym("tiempo_da_fallo_login")
+
     # Relationships
     rol = relationship("Role", back_populates="usuarios")
     medico = relationship("Medico", back_populates="usuario", uselist=False, cascade="all, delete-orphan")
@@ -106,6 +109,7 @@ class Medico(Base):
     num_licencia = Column(Integer, unique=True, nullable=False, index=True)
     estado = Column(String(20), default="activo", nullable=False)
     fk_id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False, unique=True)
+    id_usuario = synonym("fk_id_usuario")
 
     # Relationships
     usuario = relationship("Usuario", back_populates="medico")
@@ -185,6 +189,7 @@ class Enfermero(Base):
     apellidos = Column(String(50), nullable=False)
     estado = Column(String(20), default="activo", nullable=False)
     fk_id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False, unique=True)
+    id_usuario = synonym("fk_id_usuario")
 
     # Relationship
     usuario = relationship("Usuario", back_populates="enfermero")
@@ -206,6 +211,7 @@ class Farmaceuta(Base):
     apellidos = Column(String(50), nullable=False)
     estado = Column(String(20), default="activo", nullable=False)
     fk_id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False, unique=True)
+    id_usuario = synonym("fk_id_usuario")
 
     # Relationship
     usuario = relationship("Usuario", back_populates="farmaceuta")
@@ -227,6 +233,7 @@ class TalentoHumano(Base):
     apellidos = Column(String(50), nullable=False)
     estado = Column(String(20), default="activo", nullable=False)
     fk_id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False, unique=True)
+    id_usuario = synonym("fk_id_usuario")
 
     # Relationship
     usuario = relationship("Usuario", back_populates="talento_humano")
