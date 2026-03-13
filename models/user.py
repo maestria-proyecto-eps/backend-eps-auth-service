@@ -1,24 +1,32 @@
-from sqlalchemy import Column, Integer, String, SmallInteger, TIMESTAMP, BigInteger
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import Column, Integer, String, BigInteger, ForeignKey, Boolean, TIMESTAMP, SmallInteger
+from sqlalchemy.orm import relationship, declarative_base
 
 AuthBase = declarative_base()
 
+class PERSONA(AuthBase):
+    __tablename__ = "persona"
+    num_documento = Column(BigInteger, primary_key=True, index=True) # PK
+    nombres = Column(String(50), nullable=False)
+    apellidos = Column(String(50), nullable=False)
+
+    # Relaciones
+    usuario = relationship("USUARIOS", back_populates="persona", uselist=False)
 
 class USUARIOS(AuthBase):
-
     __tablename__ = "usuarios"
-
-    # Definición de columnas según el diagrama
-    id_usuario = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    num_documento = Column(BigInteger, unique=True, nullable=False, index=True)
-    password = Column(String(255), nullable=False) # 255 para soportar hash en el futuro
-    id_rol = Column(Integer, nullable=False) # FK a la tabla de roles (que crearemos luego)
-    estado = Column(SmallInteger, default=1) # 1: Activo, 0: Inactivo
-    intentos_login = Column(Integer, default=0)
+    id_usuario = Column(Integer, primary_key=True, autoincrement=True) #PK
+    password = Column(String(60), nullable=False)
+    id_rol = Column(Integer, ForeignKey("roles.id_rol"), nullable=False) #FK
+    estado = Column(Boolean, default=True)
+    intentos_login = Column(SmallInteger, default=0)
     tiempo_de_fallo_login = Column(TIMESTAMP, nullable=True)
+    num_documento = Column(BigInteger, ForeignKey("persona.num_documento"), nullable=False) #FK
+
+    # Relaciones
+    persona = relationship("PERSONA", back_populates="usuario")
+    rol = relationship("ROLES")
 
 class ROLES(AuthBase):
     __tablename__ = "roles"
-
-    id_rol = Column(Integer, primary_key=True, index=True)
+    id_rol = Column(Integer, primary_key=True, index=True) #PK
     nombre_rol = Column(String(50), nullable=False, unique=True)

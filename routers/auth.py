@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from shemas.auth import LoginRequest, TokenResponse, TokenData, APIResponse,UserResponse
+from schemas.auth import LoginRequest, TokenResponse, TokenData, APIResponse,UserResponse
 from core.security import Security, crear_token_acceso
 from core.dependencias import get_usuario_actual
 from sqlalchemy.orm import Session
 from db.session import get_db
-from models.user import USUARIOS,  ROLES
-from models.profiles import MEDICOS,PACIENTES,FARMACEUTA,ENFERMEROS,TALENTO_HUMANO, RECEPCIONISTAS
+from models.user import USUARIOS, ROLES,PERSONA
 
 from datetime import datetime, timedelta, timezone
 
@@ -19,7 +18,7 @@ router = APIRouter(
 @router.post("/login", response_model=APIResponse[TokenResponse])
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     # Datos de usuario
-    user_db = db.query(USUARIOS).filter(USUARIOS.num_documento == payload.num_documento).first()
+    user_db = db.query(USUARIOS).join(PERSONA).filter(USUARIOS.num_documento == payload.num_documento).first()
 
     # Validamos que exista
     if not user_db:
@@ -46,6 +45,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if 0 < user_db.intentos_login < 5 and user_db.tiempo_de_fallo_login:
         if ahora > user_db.tiempo_de_fallo_login + timedelta(minutes=10):
             user_db.intentos_login = 0
+            db.commit()
 
 
     # Validar usuario y contraseña en base de datos
@@ -53,6 +53,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         # Si falla se establece hora de primer intento
         if user_db.intentos_login == 0:
             user_db.tiempo_de_fallo_login = ahora
+
         user_db.intentos_login += 1
 
         # Este error fue el número 5, activamos el reloj de los 15 min último intento
@@ -71,7 +72,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         }
 
     # LOGIN EXITOSO
-    if user_db.estado == 0:
+    if user_db.estado ==0:
         return {
             "hasError": True,
             "Message": "Afiliación inactiva.",
@@ -84,7 +85,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
 
     rol_db = db.query(ROLES).filter(ROLES.id_rol == user_db.id_rol).first()
-    nombre_role = rol_db.nombre_rol if rol_db else "Recepcionista"
+    nombre_role = rol_db.nombre_rol if rol_db else "Paciente"
     # Datos para el token
     token_data = {
         "id_usuario": user_db.id_usuario,
@@ -105,23 +106,13 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 def get_me(usuario_actual: USUARIOS = Depends(get_usuario_actual),db: Session = Depends(get_db)):
 
     rol_db = db.query(ROLES).filter(ROLES.id_rol == usuario_actual.id_rol).first()
-    nombre_role = rol_db.nombre_rol if rol_db else "Recepcionista"
-    perfiles = {
-        2: MEDICOS,
-        3: PACIENTES,
-        4: ENFERMEROS,
-        5: FARMACEUTA,
-        6: RECEPCIONISTAS,
-        7: TALENTO_HUMANO
-    }
-    perfil_clase = perfiles.get(usuario_actual.id_rol)
-    nombres, apellidos = "Desconocido", "Desconocido"
+    nombre_role = rol_db.nombre_rol if rol_db else "Paciente"
 
-    if perfil_clase:
-        extra_data = db.query(perfil_clase).filter(perfil_clase.id_usuario == usuario_actual.id_usuario).first()
-        if extra_data:
-            nombres = extra_data.nombres
-            apellidos = extra_data.apellidos
+    persona = db.query(PERSONA).filter(PERSONA.num_documento == usuario_actual.num_documento).first()
+    nombres = persona.nombres if persona else "Desconocido"
+    apellidos = persona.apellidos if persona else "Desconocido"
+    estado= 1 if usuario_actual.estado else 0
+
     return {
         "hasError": False,
         "Message": "Perfil de usuario obtenido correctamente",
@@ -130,7 +121,7 @@ def get_me(usuario_actual: USUARIOS = Depends(get_usuario_actual),db: Session = 
             "num_documento": usuario_actual.num_documento,
             "id_rol": usuario_actual.id_rol,
             "role": nombre_role,
-            "estado": usuario_actual.estado,
+            "estado": estado,
             "nombres": nombres,
             "apellidos": apellidos
         }
@@ -139,20 +130,9 @@ def get_me(usuario_actual: USUARIOS = Depends(get_usuario_actual),db: Session = 
 # Endpoint PROTEGIDO para cerrar sesión
 @router.post("/logout", response_model=APIResponse[None])
 def logout(current_user: USUARIOS = Depends(get_usuario_actual),db: Session = Depends(get_db)):
-    perfiles = {
-        2: MEDICOS,
-        3: PACIENTES,
-        4: ENFERMEROS,
-        5: FARMACEUTA,
-        6: RECEPCIONISTAS,
-        7: TALENTO_HUMANO
-    }
-    perfil_clase = perfiles.get(current_user.id_rol)
-    nombre_completo = "Usuario"
-    if perfil_clase:
-        extra_data = db.query(perfil_clase).filter(perfil_clase.id_usuario == current_user.id_usuario).first()
-        if extra_data:
-            nombre_completo = f"{extra_data.nombres} {extra_data.apellidos}"
+
+    persona = db.query(PERSONA).filter(PERSONA.num_documento == current_user.num_documento).first()
+    nombre_completo = f"{persona.nombres} {persona.apellidos}" if persona else "Paciente"
     # Mensaje de cierre de sesión
     return {
         "hasError": False,

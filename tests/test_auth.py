@@ -4,9 +4,9 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-os.environ["DB_ADMIN_USER"] = "postgres.rhozelgowvxrhifghklq"
-os.environ["DB_ADMIN_PASSWORD"] = "CuidarteEPS123$$"
-os.environ["DB_ADMIN_HOST"] = "aws-1-us-east-1.pooler.supabase.com"
+os.environ["DB_ADMIN_USER"] = "postgres.nmrdrrpvnthoohjvrylq"
+os.environ["DB_ADMIN_PASSWORD"] = "Cu1d4rt3Adm1n%"
+os.environ["DB_ADMIN_HOST"] = "aws-1-us-east-2.pooler.supabase.com"
 os.environ["DB_ADMIN_PORT"] = "5432"
 os.environ["DB_ADMIN_NAME"] = "postgres"
 
@@ -190,7 +190,7 @@ def test_obtener_mi_perfil_PACIENTE():
 
     # Validamos cada campo de Userio
     user_data = json_response["Data"]
-    assert user_data["id_usuario"] == 11
+    assert user_data["id_usuario"] == 44
     assert user_data["num_documento"] == 1018442903
     assert user_data["id_rol"] == 3
     assert user_data["estado"] == 1

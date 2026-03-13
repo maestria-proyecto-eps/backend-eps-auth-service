@@ -4,7 +4,7 @@ import bcrypt
 from datetime import datetime, timedelta, timezone
 from jose import jwt
 #Para garantizar el formato de los datos en token
-from shemas.auth import TokenData
+from schemas.auth import TokenData
 #  Para leer archivo .env
 from core.config import settings
 
@@ -27,7 +27,6 @@ class Security:
         hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
         # Retorna como string
         return hashed.decode("utf-8")
-
 
 def crear_token_acceso(data: dict):
 
