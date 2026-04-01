@@ -2,17 +2,9 @@ from fastapi import FastAPI, HTTPException, status , Depends
 from fastapi.middleware.cors import CORSMiddleware
 from core.logger import setup_logging, get_logger
 
-# Hash para pwd de pruebas
-from core.security import Security
-
 # Rutas de loggin
 from routers import auth
-from routers import patients
 
-# Importaciones de Base de Datos
-from db.session import SessionLocal, engine, Base,get_db
-from models.user import USUARIOS, ROLES
-from models.profiles import MEDICOS,PACIENTES,FARMACEUTA,ENFERMEROS,TALENTO_HUMANO, RECEPCIONISTAS
 
 app = FastAPI(
     title="EPS API 2",
@@ -59,5 +51,4 @@ def root():
 
 # rutas de autenticación
 app.include_router(auth.router)
-app.include_router(patients.router)
 
