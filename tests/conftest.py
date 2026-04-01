@@ -18,9 +18,10 @@ os.environ.setdefault("JWT_EXPIRES_MINUTES", "60")
 os.environ.setdefault("JWT_SECRET", "test-secret")
 os.environ.setdefault("JWT_ALGORITHM", "HS256")
 
-from models import Base, Paciente, Recepcionista, Role, Usuario
+from models import Base, Paciente, Persona, Recepcionista, Role, Usuario
 from routers import patients as patients_router
 from db.session import get_db
+from core.dependencias import get_usuario_actual
 
 TEST_DATABASE_URL = "sqlite://"
 
@@ -46,6 +47,14 @@ def _seed_roles(db):
 
 
 def _seed_receptionist(db):
+    persona = Persona(
+        num_documento=9000000001,
+        nombres="Recepcion",
+        apellidos="Prueba",
+    )
+    db.add(persona)
+    db.flush()
+
     usuario = Usuario(
         num_documento=9000000001,
         password="hashed-password",
@@ -72,21 +81,31 @@ def create_patient_record(
     *,
     num_documento: int,
     email: str,
-    estado: int = 1,
+    estado: str = "Activo",
     nombres: str = "Paciente",
     apellidos: str = "Prueba",
     direccion: str = "Calle 1 # 2-3",
+    telefono: int = 3000000000,
     contacto_emergencia: str = "Contacto Base",
-    telefono_emergencia: int = 3000000000,
-    grupo_sanguineo: str = "O+",
-    factor_rh: str = "+",
-    num_afiliacion: int = 2026022800001,
+    genero: str = "Femenino",
+    tipo_sangre: str = "O+",
+    num_afiliacion: int = 202602281,
 ):
+    status_map = {"Activo": 1, "Inactivo": 0, "Suspendido": 2}
+
+    persona = Persona(
+        num_documento=num_documento,
+        nombres=nombres,
+        apellidos=apellidos,
+    )
+    db.add(persona)
+    db.flush()
+
     usuario = Usuario(
         num_documento=num_documento,
         password="hashed-password",
         fk_id_rol=2,
-        estado=1,
+        estado=status_map[estado],
         intentos_login=0,
     )
     db.add(usuario)
@@ -94,21 +113,17 @@ def create_patient_record(
 
     paciente = Paciente(
         id_paciente=num_documento,
-        nombres=nombres,
-        apellidos=apellidos,
-        estado=estado,
         consentimiento_datos=True,
-        num_afiliacion=num_afiliacion,
-        genero="Femenino",
         fecha_nac=date(1990, 5, 15),
+        num_afiliacion=num_afiliacion,
+        genero=genero,
         direccion=direccion,
         contacto_emergencia=contacto_emergencia,
-        telefono_emergencia=telefono_emergencia,
-        grupo_sanguineo=grupo_sanguineo,
-        factor_RH=factor_rh,
+        telefono_emergencia=telefono,
+        grupo_sanguineo=tipo_sangre,
+        factor_RH=tipo_sangre[-1],
         email=email,
         id_recepcionista=52991334,
-        id_usuario=usuario.id_usuario,
     )
     db.add(paciente)
     db.commit()
@@ -142,6 +157,11 @@ def client(db_session):
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
+
+    def override_get_usuario_actual():
+        return db_session.query(Usuario).filter(Usuario.fk_id_rol == 2).first()
+
+    app.dependency_overrides[get_usuario_actual] = override_get_usuario_actual
     try:
         yield TestClient(app)
     finally:

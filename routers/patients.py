@@ -15,11 +15,34 @@ from schemas.patients import (
 )
 from service.patient_service import PatientService
 from db.session import get_db
+from core.dependencias import get_usuario_actual
 
 router = APIRouter(
     prefix="/api/patients",
     tags=["Patients"],
 )
+
+
+def _to_patient_response(paciente) -> PacienteResponse:
+    persona = getattr(paciente, "persona", None)
+    usuario = getattr(paciente, "usuario", None)
+    return PacienteResponse(
+        id_paciente=paciente.id_paciente,
+        estado_afiliacion=PatientService.status_to_string(getattr(usuario, "estado", None)),
+        consentimiento_datos=paciente.consentimiento_datos,
+        num_afiliacion=paciente.num_afiliacion_formateado,
+        num_afiliacion_formateado=paciente.num_afiliacion_formateado,
+        fecha_nacimiento=paciente.fecha_nac,
+        tipo_sangre=paciente.grupo_sanguineo,
+        id_recepcionista=paciente.id_recepcionista,
+        nombres=getattr(persona, "nombres", None),
+        apellidos=getattr(persona, "apellidos", None),
+        genero=paciente.genero,
+        direccion=paciente.direccion,
+        telefono=paciente.telefono_emergencia,
+        contacto_emergencia=paciente.contacto_emergencia,
+        email=paciente.email,
+    )
 
 
 @router.post(
@@ -29,8 +52,8 @@ router = APIRouter(
     summary="Afiliar nuevo paciente",
     description=(
         "Crea un nuevo paciente.\n"
-        "Campos clave del request: num_documento, password, nombres, apellidos, fecha_nac, consentimiento_datos.\n"
-        "Campos administrados por backend: id_paciente, id_usuario, id_recepcionista, num_afiliacion."
+        "Campos clave del request: num_documento, password, nombres, apellidos, fecha_nacimiento, consentimiento_datos.\n"
+        "Campos administrados por backend: id_paciente, id_recepcionista, num_afiliacion, estado_afiliacion."
     )
 )
 def create_patient(
@@ -46,17 +69,16 @@ def create_patient(
       "apellidos": "Rojas",
       "email": "laura.rojas@mail.com",
       "genero": "Femenino",
-      "fecha_nac": "1992-03-03",
+            "fecha_nacimiento": "1992-03-03",
       "direccion": "Calle 10 #20-30",
+            "telefono": 3001234567,
       "contacto_emergencia": "Carlos Rojas",
-      "telefono_emergencia": 3001234567,
-      "grupo_sanguineo": "O+",
-      "factor_RH": "+",
+            "tipo_sangre": "O+",
       "consentimiento_datos": true
     }
     """
     paciente = PatientService.create_patient(db, patient_data)
-    return paciente
+    return _to_patient_response(paciente)
 
 
 @router.get(
@@ -68,19 +90,19 @@ def create_patient(
 def list_patients(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
-    estado: Optional[int] = Query(None, ge=1, le=3, description="Filter by status: 1=Activo, 2=Inactivo, 3=Suspendido"),
+    estado: Optional[str] = Query(None, description="Filter by status: Activo, Inactivo, Suspendido"),
     genero: Optional[str] = Query(None, description="Filter by gender"),
-    grupo_sanguineo: Optional[str] = Query(None, description="Filter by blood type"),
+    tipo_sangre: Optional[str] = Query(None, description="Filter by blood type"),
     db: Session = Depends(get_db),
 ):
     """
     Filtros disponibles:
-    - **estado**: 1=Activo, 2=Inactivo, 3=Suspendido
+    - **estado**: Activo, Inactivo, Suspendido
     - **genero**
-    - **grupo_sanguineo**
+    - **tipo_sangre**
 
     Ejemplo de uso:
-    GET /api/patients?skip=0&limit=10&estado=1
+    GET /api/patients?skip=0&limit=10&estado=Activo
     """
     patients, total = PatientService.get_patients(
         db,
@@ -88,14 +110,14 @@ def list_patients(
         limit=limit,
         estado=estado,
         genero=genero,
-        grupo_sanguineo=grupo_sanguineo,
+        tipo_sangre=tipo_sangre,
     )
 
     return {
         "total": total,
         "skip": skip,
         "limit": limit,
-        "patients": [PacienteResponse.model_validate(p) for p in patients]
+        "patients": [_to_patient_response(p) for p in patients]
     }
 
 
@@ -111,12 +133,12 @@ def get_patient(
 ):
     """Get patient details by ID"""
     paciente = PatientService.get_patient_by_id(db, patient_id)
-    return paciente
+    return _to_patient_response(paciente)
 @router.put(
     "/{patient_id:int}/affiliation-status",
     response_model=PacienteResponse,
     summary="Cambiar estado de afiliación",
-    description="Actualiza estado usando valores numéricos: 1=Activo, 2=Inactivo, 3=Suspendido."
+    description="Actualiza estado usando valores: Activo, Inactivo, Suspendido."
 )
 def update_affiliation_status(
     patient_id: int,
@@ -128,7 +150,7 @@ def update_affiliation_status(
 
         Ejemplo:
         {
-            "estado": 2,
+            "estado": "Inactivo",
             "motivo": "Pago no realizado"
         }
     """
@@ -137,7 +159,7 @@ def update_affiliation_status(
         patient_id,
         status_update,
     )
-    return paciente
+    return _to_patient_response(paciente)
 
 
 @router.get(
@@ -147,17 +169,21 @@ def update_affiliation_status(
     description="Consulta perfil por id_paciente."
 )
 def get_my_profile(
-    patient_id: int = Query(..., description="Patient ID"),
+    usuario_actual=Depends(get_usuario_actual),
     db: Session = Depends(get_db),
 ):
     """
     Ejemplo:
-    GET /api/patients/me?patient_id=1018442903
+    GET /api/patients/me con token Bearer válido
     """
-    paciente = PatientService.get_patient_by_id(db, patient_id)
+    user_id = getattr(usuario_actual, "id_usuario", None)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Invalid authenticated user")
+
+    paciente = PatientService.get_patient_by_user_id(db, user_id)
     if not paciente:
         raise HTTPException(status_code=404, detail="Patient not found")
-    return paciente
+    return _to_patient_response(paciente)
 
 
 @router.put(
@@ -167,31 +193,33 @@ def get_my_profile(
     description="Actualiza campos editables del perfil del paciente."
 )
 def update_my_profile(
-    patient_id: int = Query(..., description="Patient ID"),
+    usuario_actual=Depends(get_usuario_actual),
     profile_update: PacienteProfileUpdate = Body(...),
     db: Session = Depends(get_db),
 ):
     """
         Ejemplo:
-        PUT /api/patients/me/profile?patient_id=1018442903
+        PUT /api/patients/me/profile con token Bearer válido
         {
             "direccion": "Carrera 7 #45-10",
             "contacto_emergencia": "María López",
-            "telefono_emergencia": 3009998887
+            "telefono": 3009998887
         }
     """
     update_dict = profile_update.model_dump(exclude_unset=True)
     if not update_dict:
         raise HTTPException(status_code=400, detail="No data provided to update")
 
-    paciente = PatientService.update_patient_profile(
-        db,
-        patient_id,
-        update_dict,
-    )
+    user_id = getattr(usuario_actual, "id_usuario", None)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Invalid authenticated user")
+
+    paciente = PatientService.get_patient_by_user_id(db, user_id)
+
+    paciente = PatientService.update_patient_profile(db, paciente.id_paciente, update_dict)
     if not paciente:
         raise HTTPException(status_code=404, detail="Patient not found")
-    return paciente
+    return _to_patient_response(paciente)
 
 
 @router.put(
@@ -208,8 +236,8 @@ def update_patient_profile(
     """
     Campos editables:
     - direccion
+    - telefono
     - contacto_emergencia
-    - telefono_emergencia
     """
     update_dict = profile_update.model_dump(exclude_unset=True)
     paciente = PatientService.update_patient_profile(
@@ -217,4 +245,4 @@ def update_patient_profile(
         patient_id,
         update_dict,
     )
-    return paciente
+    return _to_patient_response(paciente)

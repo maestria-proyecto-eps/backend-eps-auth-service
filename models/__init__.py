@@ -17,7 +17,7 @@ from sqlalchemy import (
     Table,
     Text,
 )
-from sqlalchemy.orm import relationship, synonym
+from sqlalchemy.orm import foreign, relationship, synonym
 from db.session import Base
 
 
@@ -56,7 +56,7 @@ class Usuario(Base):
     __tablename__ = "usuarios"
 
     id_usuario = Column(Integer, primary_key=True, index=True)
-    num_documento = Column(BigInteger, unique=True, nullable=False, index=True)
+    num_documento = Column(BigInteger, ForeignKey("personas.num_documento"), unique=True, nullable=False, index=True)
     password = Column(String(255), nullable=False)
     fk_id_rol = Column("id_rol", Integer, ForeignKey("roles.id_rol"), nullable=False)
     estado = Column(SmallInteger, default=1, nullable=False)
@@ -68,8 +68,15 @@ class Usuario(Base):
 
     # Relationships
     rol = relationship("Role", back_populates="usuarios")
+    persona = relationship("Persona", back_populates="usuario", uselist=False)
     medico = relationship("Medico", back_populates="usuario", uselist=False, cascade="all, delete-orphan")
-    paciente = relationship("Paciente", back_populates="usuario", uselist=False, cascade="all, delete-orphan")
+    paciente = relationship(
+        "Paciente",
+        back_populates="usuario",
+        uselist=False,
+        primaryjoin="Usuario.num_documento==foreign(Paciente.id_paciente)",
+        overlaps="persona,paciente",
+    )
     enfermero = relationship("Enfermero", back_populates="usuario", uselist=False, cascade="all, delete-orphan")
     farmaceuta = relationship("Farmaceuta", back_populates="usuario", uselist=False, cascade="all, delete-orphan")
     talento_humano = relationship("TalentoHumano", back_populates="usuario", uselist=False, cascade="all, delete-orphan")
@@ -126,42 +133,70 @@ class Medico(Base):
         return f"<Medico(id_medico={self.id_medico}, nombres={self.nombres}, apellidos={self.apellidos})>"
 
 
+class Persona(Base):
+    """Administrative person profile associated to users"""
+
+    __tablename__ = "personas"
+
+    num_documento = Column(BigInteger, primary_key=True, index=True)
+    nombres = Column(String(50), nullable=False)
+    apellidos = Column(String(50), nullable=False)
+    usuario = relationship("Usuario", back_populates="persona")
+    paciente = relationship(
+        "Paciente",
+        back_populates="persona",
+        uselist=False,
+        foreign_keys="Paciente.id_paciente",
+        overlaps="paciente,usuario",
+    )
+
+    def __repr__(self):
+        return f"<Persona(num_documento={self.num_documento}, nombres={self.nombres})>"
+
+
 class Paciente(Base):
     """Patients"""
 
     __tablename__ = "pacientes"
 
-    id_paciente = Column(BigInteger, primary_key=True, index=True)
-    nombres = Column(String(50), nullable=False)
-    apellidos = Column(String(50), nullable=False)
-    estado = Column(SmallInteger, default=1, nullable=False)
-    consentimiento_datos = Column(Boolean, default=False)
+    id_paciente = Column(BigInteger, ForeignKey("personas.num_documento"), primary_key=True, index=True)
+    consentimiento_datos = Column(Boolean, default=False, nullable=False)
+    fecha_nac = Column(Date, nullable=False)
     num_afiliacion = Column(BigInteger, unique=True, nullable=False, index=True)
     genero = Column(String(50), nullable=False)
-    fecha_nac = Column(Date, nullable=False)
-    direccion = Column(String(100), nullable=True)
-    contacto_emergencia = Column(String(50), nullable=True)
-    telefono_emergencia = Column(BigInteger, nullable=True)
-    grupo_sanguineo = Column(String(2), nullable=True)
-    factor_RH = Column("factor_rh", String(1), nullable=True)
-    email = Column(String(80), nullable=True, index=True)
-    id_recepcionista = Column(BigInteger, ForeignKey("recepcionistas.id_recepcionista"), nullable=False)
-    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False, unique=True)
+    direccion = Column(String(100), nullable=False)
+    contacto_emergencia = Column(String(50), nullable=False)
+    telefono_emergencia = Column(BigInteger, nullable=False)
+    grupo_sanguineo = Column(String(2), nullable=False)
+    factor_RH = Column("factor_rh", String(1), nullable=False)
+    email = Column(String(80), nullable=False, unique=True, index=True)
+    id_recepcionista = Column(BigInteger, ForeignKey("personas.num_documento"), nullable=False)
+    fecha_registro = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationship
-    usuario = relationship("Usuario", back_populates="paciente")
+    persona = relationship(
+        "Persona",
+        back_populates="paciente",
+        foreign_keys=[id_paciente],
+        overlaps="paciente,usuario",
+    )
+    usuario = relationship(
+        "Usuario",
+        back_populates="paciente",
+        uselist=False,
+        primaryjoin="foreign(Paciente.id_paciente)==Usuario.num_documento",
+        overlaps="paciente,persona",
+    )
 
     @property
     def num_afiliacion_formateado(self) -> str:
         raw = str(self.num_afiliacion)
         if len(raw) >= 9:
-            date_part = raw[:8]
-            sequence_part = str(int(raw[8:]))
-            return f"EPS-{date_part}-{sequence_part}"
+            return f"EPS-{raw[:8]}-{int(raw[8:])}"
         return f"EPS-{raw}"
 
     def __repr__(self):
-        return f"<Paciente(id_paciente={self.id_paciente}, nombres={self.nombres}, num_afiliacion={self.num_afiliacion})>"
+        return f"<Paciente(id_paciente={self.id_paciente}, num_afiliacion={self.num_afiliacion})>"
 
 
 class Recepcionista(Base):

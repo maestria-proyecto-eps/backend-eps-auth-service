@@ -20,18 +20,17 @@ class PacienteCreate(BaseModel):
     apellidos: str = Field(..., min_length=2, max_length=50)
     email: EmailStr
     genero: str = Field(..., description="Género: Masculino, Femenino, Otro")
-    fecha_nac: date = Field(..., description="Fecha de nacimiento")
+    fecha_nacimiento: date = Field(..., description="Fecha de nacimiento")
     direccion: str = Field(..., min_length=5, max_length=100)
+    telefono: Optional[int] = Field(None, gt=0, description="Phone")
     contacto_emergencia: str = Field(..., min_length=2, max_length=50)
-    telefono_emergencia: int = Field(..., gt=0, description="Emergency phone")
-    grupo_sanguineo: str = Field(..., pattern="^(O|A|B|AB)[+-]$", description="Blood type: O+, O-, A+, etc")
-    factor_RH: str = Field(..., pattern="^[+-]$", description="RH factor: + or -")
+    tipo_sangre: str = Field(..., pattern="^(O|A|B|AB)[+-]$", description="Blood type: O+, O-, A+, etc")
     consentimiento_datos: bool = Field(
         ...,
         description="Data consent (Ley 1581/2012) - MUST be True"
     )
     
-    @field_validator('grupo_sanguineo')
+    @field_validator('tipo_sangre')
     @classmethod
     def validate_blood_type(cls, v):
         valid = {'O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'}
@@ -55,12 +54,11 @@ class PacienteCreate(BaseModel):
                 "apellidos": "Diaz",
                 "email": "camila.diaz@example.com",
                 "genero": "Femenino",
-                "fecha_nac": "1990-05-15",
+                "fecha_nacimiento": "1990-05-15",
                 "direccion": "Calle 10 #20-30, Apto 301",
+                "telefono": 3001234567,
                 "contacto_emergencia": "Carlos Diaz",
-                "telefono_emergencia": 1234567890,
-                "grupo_sanguineo": "O+",
-                "factor_RH": "+",
+                "tipo_sangre": "O+",
                 "consentimiento_datos": True
             }
         }
@@ -70,20 +68,18 @@ class PacienteResponse(BaseModel):
     """Schema for patient response"""
     
     id_paciente: int
-    nombres: str
-    apellidos: str
-    estado: int
+    nombres: Optional[str] = None
+    apellidos: Optional[str] = None
+    estado_afiliacion: str
     consentimiento_datos: bool
-    id_usuario: int
-    fecha_nac: date
-    num_afiliacion: int
+    fecha_nacimiento: Optional[date] = None
+    num_afiliacion: str
     num_afiliacion_formateado: Optional[str] = None
-    genero: str
+    genero: Optional[str] = None
     direccion: Optional[str] = None
+    telefono: Optional[int] = None
     contacto_emergencia: Optional[str] = None
-    telefono_emergencia: Optional[int] = None
-    grupo_sanguineo: Optional[str] = None
-    factor_RH: Optional[str] = None
+    tipo_sangre: str
     email: Optional[str] = None
     id_recepcionista: int
     
@@ -94,18 +90,16 @@ class PacienteResponse(BaseModel):
                 "id_paciente": 1234567890,
                 "nombres": "Laura",
                 "apellidos": "Rojas",
-                "estado": 1,
+                "estado_afiliacion": "Activo",
                 "consentimiento_datos": True,
-                "id_usuario": 58,
-                "fecha_nac": "1992-03-03",
-                "num_afiliacion": 202602283,
+                "fecha_nacimiento": "1992-03-03",
+                "num_afiliacion": "EPS-20260228-3",
                 "num_afiliacion_formateado": "EPS-20260228-3",
                 "genero": "Femenino",
                 "direccion": "Calle 10 #20-30",
+                "telefono": 3001234567,
                 "contacto_emergencia": "Carlos Rojas",
-                "telefono_emergencia": 3001234567,
-                "grupo_sanguineo": "O+",
-                "factor_RH": "+",
+                "tipo_sangre": "O+",
                 "email": "laura.rojas@mail.com",
                 "id_recepcionista": 52991334
             }
@@ -116,15 +110,15 @@ class PacienteProfileUpdate(BaseModel):
     """Schema for updating patient profile"""
     
     direccion: Optional[str] = Field(None, min_length=5, max_length=100)
+    telefono: Optional[int] = Field(None, gt=0)
     contacto_emergencia: Optional[str] = Field(None, min_length=2, max_length=50)
-    telefono_emergencia: Optional[int] = Field(None, gt=0)
     
     class Config:
         json_schema_extra = {
             "example": {
                 "direccion": "Carrera 8 #45-20, Apto 401",
                 "contacto_emergencia": "Ana Diaz",
-                "telefono_emergencia": 1234567891
+                "telefono": 1234567891
             }
         }
 
@@ -132,13 +126,22 @@ class PacienteProfileUpdate(BaseModel):
 class AffiliationStatusUpdate(BaseModel):
     """Schema for updating affiliation status"""
 
-    estado: int = Field(..., ge=1, le=3, description="Estado afiliación: 1=Activo, 2=Inactivo, 3=Suspendido")
+    estado: str = Field(..., description="Estado afiliación: Activo, Inactivo, Suspendido")
     motivo: Optional[str] = Field(None, max_length=255)
+
+    @field_validator('estado')
+    @classmethod
+    def validate_estado(cls, value: str) -> str:
+        valid_states = {"Activo", "Inactivo", "Suspendido"}
+        normalized = value.strip().title()
+        if normalized not in valid_states:
+            raise ValueError("Estado must be one of: Activo, Inactivo, Suspendido")
+        return normalized
     
     class Config:
         json_schema_extra = {
             "example": {
-                "estado": 3,
+                "estado": "Suspendido",
                 "motivo": "Pago no realizado"
             }
         }
@@ -147,8 +150,8 @@ class AffiliationStatusUpdate(BaseModel):
 class PacienteFilterParams(BaseModel):
     """Query parameters for patient filtering"""
     
-    estado: Optional[int] = None
+    estado: Optional[str] = None
     genero: Optional[str] = None
-    grupo_sanguineo: Optional[str] = None
+    tipo_sangre: Optional[str] = None
     skip: int = Field(0, ge=0)
     limit: int = Field(10, ge=1, le=100)

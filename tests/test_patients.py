@@ -10,12 +10,11 @@ def build_patient_payload(suffix: int = 1):
         "apellidos": "Diaz",
         "email": f"camila{suffix}@example.com",
         "genero": "Femenino",
-        "fecha_nac": "1990-05-15",
+        "fecha_nacimiento": "1990-05-15",
         "direccion": "Calle 10 #20-30, Apto 301",
+        "telefono": 3002004000 + suffix,
         "contacto_emergencia": "Carlos Diaz",
-        "telefono_emergencia": 3001234500 + suffix,
-        "grupo_sanguineo": "O+",
-        "factor_RH": "+",
+        "tipo_sangre": "O+",
         "consentimiento_datos": True,
     }
 
@@ -29,15 +28,15 @@ def test_create_patient_creates_user_and_patient(client, db_session):
     assert body["nombres"] == "Camila1"
     assert body["apellidos"] == "Diaz"
     assert body["email"] == "camila1@example.com"
-    assert body["estado"] == 1
+    assert body["estado_afiliacion"] == "Activo"
     assert body["consentimiento_datos"] is True
-    assert isinstance(body["num_afiliacion"], int)
+    assert body["num_afiliacion"].startswith("EPS-")
 
-    patient = db_session.query(Paciente).filter(Paciente.email == "camila1@example.com").first()
+    patient = db_session.query(Paciente).filter(Paciente.id_paciente == 1010000001).first()
     user = db_session.query(Usuario).filter(Usuario.num_documento == 1010000001).first()
     assert patient is not None
     assert user is not None
-    assert patient.id_usuario == user.id_usuario
+    assert patient.id_paciente == user.num_documento
 
 
 def test_create_patient_requires_data_consent(client):
@@ -55,18 +54,18 @@ def test_list_patients_filters_by_estado(client, db_session):
         db_session,
         num_documento=2000000001,
         email="activo@example.com",
-        estado=1,
-        num_afiliacion=2026022800001,
+        estado="Activo",
+        num_afiliacion=202602281,
     )
     create_patient_record(
         db_session,
         num_documento=2000000002,
         email="inactivo@example.com",
-        estado=2,
-        num_afiliacion=2026022800002,
+        estado="Inactivo",
+        num_afiliacion=202602282,
     )
 
-    response = client.get("/api/patients", params={"estado": 1})
+    response = client.get("/api/patients", params={"estado": "Activo"})
 
     assert response.status_code == 200
     body = response.json()
@@ -74,7 +73,7 @@ def test_list_patients_filters_by_estado(client, db_session):
     assert body["total"] == 1
     assert len(body["patients"]) == 1
     assert body["patients"][0]["id_paciente"] == active_patient.id_paciente
-    assert body["patients"][0]["estado"] == 1
+    assert body["patients"][0]["estado_afiliacion"] == "Activo"
 
 
 def test_update_affiliation_status_changes_patient_state(client, db_session):
@@ -82,17 +81,17 @@ def test_update_affiliation_status_changes_patient_state(client, db_session):
         db_session,
         num_documento=2000000010,
         email="estado@example.com",
-        estado=1,
-        num_afiliacion=2026022800010,
+        estado="Activo",
+        num_afiliacion=2026022810,
     )
 
     response = client.put(
         f"/api/patients/{patient.id_paciente}/affiliation-status",
-        json={"estado": 3, "motivo": "Pago no realizado"},
+        json={"estado": "Suspendido", "motivo": "Pago no realizado"},
     )
 
     assert response.status_code == 200
-    assert response.json()["estado"] == 3
+    assert response.json()["estado_afiliacion"] == "Suspendido"
 
 
 def test_get_my_profile_returns_patient_data(client, db_session):
@@ -102,10 +101,10 @@ def test_get_my_profile_returns_patient_data(client, db_session):
         email="perfil@example.com",
         nombres="Laura",
         apellidos="Moreno",
-        num_afiliacion=2026022800020,
+        num_afiliacion=2026022820,
     )
 
-    response = client.get("/api/patients/me", params={"patient_id": patient.id_paciente})
+    response = client.get("/api/patients/me")
 
     assert response.status_code == 200
     body = response.json()
@@ -121,17 +120,16 @@ def test_update_my_profile_updates_allowed_fields(client, db_session):
         email="actualizar@example.com",
         direccion="Calle Original 123",
         contacto_emergencia="Maria Lopez",
-        telefono_emergencia=3000000030,
-        num_afiliacion=2026022800030,
+        telefono=3000000030,
+        num_afiliacion=2026022830,
     )
 
     response = client.put(
         "/api/patients/me/profile",
-        params={"patient_id": patient.id_paciente},
         json={
             "direccion": "Carrera 50 # 10-20",
             "contacto_emergencia": "Ana Diaz",
-            "telefono_emergencia": 3001112233,
+            "telefono": 3001112233,
         },
     )
 
@@ -139,4 +137,4 @@ def test_update_my_profile_updates_allowed_fields(client, db_session):
     body = response.json()
     assert body["direccion"] == "Carrera 50 # 10-20"
     assert body["contacto_emergencia"] == "Ana Diaz"
-    assert body["telefono_emergencia"] == 3001112233
+    assert body["telefono"] == 3001112233
