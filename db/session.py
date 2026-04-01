@@ -12,9 +12,10 @@ PASSWORD = os.getenv("DB_ADMIN_PASSWORD")
 HOST = os.getenv("DB_ADMIN_HOST")
 PORT = os.getenv("DB_ADMIN_PORT")
 DBNAME = os.getenv("DB_ADMIN_NAME")
+SSLMODE = os.getenv("DB_ADMIN_SSLMODE", "require")
 
 # Construcción de la URL con SSL requerido para Supabase
-DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
+DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode={SSLMODE}"
 
 engine = create_engine(DATABASE_URL, poolclass=NullPool)
 
