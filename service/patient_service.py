@@ -17,8 +17,8 @@ from schemas.patients import PacienteCreate, AffiliationStatusUpdate
 class PatientService:
     """Service class for patient operations"""
 
-    STATUS_TO_DB = {"Activo": 1, "Inactivo": 0, "Suspendido": 2}
-    DB_TO_STATUS = {1: "Activo", 0: "Inactivo", 2: "Suspendido"}
+    STATUS_TO_DB = {"Activo": True, "Inactivo": False, "Suspendido": False}
+    DB_TO_STATUS = {True: "Activo", False: "Inactivo"}
     
     @staticmethod
     def generate_affiliation_number(db: Session) -> int:
@@ -144,6 +144,7 @@ class PatientService:
                     db.query(Usuario.num_documento)
                     .filter(Usuario.fk_id_rol == rol_recepcionista.id_rol)
                     .order_by(Usuario.id_usuario)
+                    .limit(1)
                     .scalar()
                 )
 

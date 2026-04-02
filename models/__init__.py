@@ -56,10 +56,10 @@ class Usuario(Base):
     __tablename__ = "usuarios"
 
     id_usuario = Column(Integer, primary_key=True, index=True)
-    num_documento = Column(BigInteger, ForeignKey("personas.num_documento"), unique=True, nullable=False, index=True)
+    num_documento = Column(BigInteger, ForeignKey("persona.num_documento"), unique=True, nullable=False, index=True)
     password = Column(String(255), nullable=False)
     fk_id_rol = Column("id_rol", Integer, ForeignKey("roles.id_rol"), nullable=False)
-    estado = Column(SmallInteger, default=1, nullable=False)
+    estado = Column(Boolean, default=True, nullable=False)
     intentos_login = Column(SmallInteger, default=0)
     tiempo_da_fallo_login = Column("tiempo_de_fallo_login", DateTime, nullable=True)
 
@@ -136,7 +136,7 @@ class Medico(Base):
 class Persona(Base):
     """Administrative person profile associated to users"""
 
-    __tablename__ = "personas"
+    __tablename__ = "persona"
 
     num_documento = Column(BigInteger, primary_key=True, index=True)
     nombres = Column(String(50), nullable=False)
@@ -159,7 +159,7 @@ class Paciente(Base):
 
     __tablename__ = "pacientes"
 
-    id_paciente = Column(BigInteger, ForeignKey("personas.num_documento"), primary_key=True, index=True)
+    id_paciente = Column(BigInteger, ForeignKey("persona.num_documento"), primary_key=True, index=True)
     consentimiento_datos = Column(Boolean, default=False, nullable=False)
     fecha_nac = Column(Date, nullable=False)
     num_afiliacion = Column(BigInteger, unique=True, nullable=False, index=True)
@@ -170,7 +170,7 @@ class Paciente(Base):
     grupo_sanguineo = Column(String(2), nullable=False)
     factor_RH = Column("factor_rh", String(1), nullable=False)
     email = Column(String(80), nullable=False, unique=True, index=True)
-    id_recepcionista = Column(BigInteger, ForeignKey("personas.num_documento"), nullable=False)
+    id_recepcionista = Column(BigInteger, ForeignKey("persona.num_documento"), nullable=False)
     fecha_registro = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationship

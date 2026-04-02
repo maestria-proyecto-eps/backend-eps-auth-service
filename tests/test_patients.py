@@ -87,11 +87,11 @@ def test_update_affiliation_status_changes_patient_state(client, db_session):
 
     response = client.put(
         f"/api/patients/{patient.id_paciente}/affiliation-status",
-        json={"estado": "Suspendido", "motivo": "Pago no realizado"},
+        json={"estado": "Inactivo", "motivo": "Pago no realizado"},
     )
 
     assert response.status_code == 200
-    assert response.json()["estado_afiliacion"] == "Suspendido"
+    assert response.json()["estado_afiliacion"] == "Inactivo"
 
 
 def test_get_my_profile_returns_patient_data(client, db_session):
