@@ -126,22 +126,22 @@ class PacienteProfileUpdate(BaseModel):
 class AffiliationStatusUpdate(BaseModel):
     """Schema for updating affiliation status"""
 
-    estado: str = Field(..., description="Estado afiliación: Activo, Inactivo, Suspendido")
+    estado: str = Field(..., description="Estado afiliación: Activo, Inactivo")
     motivo: Optional[str] = Field(None, max_length=255)
 
     @field_validator('estado')
     @classmethod
     def validate_estado(cls, value: str) -> str:
-        valid_states = {"Activo", "Inactivo", "Suspendido"}
+        valid_states = {"Activo", "Inactivo"}
         normalized = value.strip().title()
         if normalized not in valid_states:
-            raise ValueError("Estado must be one of: Activo, Inactivo, Suspendido")
+            raise ValueError("Estado must be one of: Activo, Inactivo")
         return normalized
     
     class Config:
         json_schema_extra = {
             "example": {
-                "estado": "Suspendido",
+                "estado": "Inactivo",
                 "motivo": "Pago no realizado"
             }
         }

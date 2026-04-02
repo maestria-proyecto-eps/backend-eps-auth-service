@@ -90,14 +90,14 @@ def create_patient(
 def list_patients(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
-    estado: Optional[str] = Query(None, description="Filter by status: Activo, Inactivo, Suspendido"),
+    estado: Optional[str] = Query(None, description="Filter by status: Activo, Inactivo"),
     genero: Optional[str] = Query(None, description="Filter by gender"),
     tipo_sangre: Optional[str] = Query(None, description="Filter by blood type"),
     db: Session = Depends(get_db),
 ):
     """
     Filtros disponibles:
-    - **estado**: Activo, Inactivo, Suspendido
+    - **estado**: Activo, Inactivo
     - **genero**
     - **tipo_sangre**
 
@@ -138,7 +138,7 @@ def get_patient(
     "/{patient_id:int}/affiliation-status",
     response_model=PacienteResponse,
     summary="Cambiar estado de afiliación",
-    description="Actualiza estado usando valores: Activo, Inactivo, Suspendido."
+    description="Actualiza estado usando valores: Activo, Inactivo."
 )
 def update_affiliation_status(
     patient_id: int,
