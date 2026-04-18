@@ -4,7 +4,8 @@ from core.logger import setup_logging, get_logger
 
 # Rutas de loggin
 from routers import auth
-from routers import patients
+from routers import permissions
+
 import models  # noqa: F401 — asegura que todos los modelos estén cargados
 
 
@@ -53,7 +54,5 @@ def root():
 
 # rutas de autenticación
 app.include_router(auth.router)
-
-# rutas de pacientes
-app.include_router(patients.router)
+app.include_router(permissions.router)
 

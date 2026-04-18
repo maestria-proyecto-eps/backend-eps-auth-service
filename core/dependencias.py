@@ -1,7 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-
 from core.config import settings
 from schemas.auth import TokenData
 
@@ -39,3 +38,18 @@ def get_usuario_actual(token: str = Depends(end_protegido),db: Session = Depends
     except JWTError:
         raise HTTPException(status_code=401, detail="Token expirado")
 
+class RequireRole:
+    def __init__(self, allowed_roles: list[str]):
+        self.allowed_roles = allowed_roles
+
+    def __call__(self, user: USUARIOS = Depends(get_usuario_actual)):
+        if user.rol.nombre_rol not in self.allowed_roles and user.rol.nombre_rol != "Administrador":
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "hasError": True,
+                    "Message": f"Acceso denegado. Se requiere uno de estos roles: {self.allowed_roles}",
+                    "Data": None
+                }
+            )
+        return user
