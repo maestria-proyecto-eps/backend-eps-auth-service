@@ -1,9 +1,10 @@
 from sqlalchemy import Column, Integer, String, BigInteger, ForeignKey, Boolean, TIMESTAMP, SmallInteger
 from sqlalchemy.orm import relationship, declarative_base
+from db.session import Base
 
-AuthBase = declarative_base()
 
-class PERSONA(AuthBase):
+
+class PERSONA(Base):
     __tablename__ = "persona"
     num_documento = Column(BigInteger, primary_key=True, index=True) # PK
     nombres = Column(String(50), nullable=False)
@@ -12,7 +13,7 @@ class PERSONA(AuthBase):
     # Relaciones
     usuario = relationship("USUARIOS", back_populates="persona", uselist=False)
 
-class USUARIOS(AuthBase):
+class USUARIOS(Base):
     __tablename__ = "usuarios"
     id_usuario = Column(Integer, primary_key=True, autoincrement=True) #PK
     password = Column(String(60), nullable=False)
@@ -26,7 +27,7 @@ class USUARIOS(AuthBase):
     persona = relationship("PERSONA", back_populates="usuario")
     rol = relationship("ROLES")
 
-class ROLES(AuthBase):
+class ROLES(Base):
     __tablename__ = "roles"
     id_rol = Column(Integer, primary_key=True, index=True) #PK
     nombre_rol = Column(String(50), nullable=False, unique=True)
