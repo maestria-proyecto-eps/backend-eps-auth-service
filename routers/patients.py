@@ -14,8 +14,8 @@ from schemas.patients import (
     PacienteResponse,
 )
 from service.patient_service import PatientService
-from db.session import get_db
-from core.dependencias import get_usuario_actual
+from db.session import get_db, get_db_audit
+from core.dependencias import RequireRole
 
 router = APIRouter(
     prefix="/api/patients",
@@ -54,7 +54,8 @@ def _to_patient_response(paciente) -> PacienteResponse:
         "Crea un nuevo paciente.\n"
         "Campos clave del request: num_documento, password, nombres, apellidos, fecha_nacimiento, consentimiento_datos.\n"
         "Campos administrados por backend: id_paciente, id_recepcionista, num_afiliacion, estado_afiliacion."
-    )
+    ),
+    dependencies=[Depends(RequireRole(["Recepcionista"]))]
 )
 def create_patient(
     patient_data: PacienteCreate,
@@ -85,7 +86,8 @@ def create_patient(
     "",
     response_model=dict,
     summary="Listar pacientes",
-    description="Lista pacientes."
+    description="Lista pacientes.",
+    dependencies=[Depends(RequireRole(["Recepcionista", "Talento Humano"]))]
 )
 def list_patients(
     skip: int = Query(0, ge=0),
@@ -125,7 +127,8 @@ def list_patients(
     "/{patient_id:int}",
     response_model=PacienteResponse,
     summary="Obtener detalles del paciente",
-    description="Retorna un paciente por id_paciente."
+    description="Retorna un paciente por id_paciente.",
+    dependencies=[Depends(RequireRole(["Recepcionista", "Talento Humano"]))]
 )
 def get_patient(
     patient_id: int,
@@ -138,12 +141,13 @@ def get_patient(
     "/{patient_id:int}/affiliation-status",
     response_model=PacienteResponse,
     summary="Cambiar estado de afiliación",
-    description="Actualiza estado usando valores: Activo, Inactivo."
+    description="Actualiza estado usando valores: Activo, Inactivo.",
+    dependencies=[Depends(RequireRole(["Recepcionista", "Talento Humano"]))]
 )
 def update_affiliation_status(
     patient_id: int,
     status_update: AffiliationStatusUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_audit),
 ):
     """
     Update patient affiliation status
@@ -169,7 +173,7 @@ def update_affiliation_status(
     description="Consulta perfil por id_paciente."
 )
 def get_my_profile(
-    usuario_actual=Depends(get_usuario_actual),
+    usuario_actual=Depends(RequireRole(["Paciente"])),
     db: Session = Depends(get_db),
 ):
     """
@@ -193,9 +197,9 @@ def get_my_profile(
     description="Actualiza campos editables del perfil del paciente."
 )
 def update_my_profile(
-    usuario_actual=Depends(get_usuario_actual),
+    usuario_actual=Depends(RequireRole(["Paciente"])),
     profile_update: PacienteProfileUpdate = Body(...),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_audit),
 ):
     """
         Ejemplo:
@@ -226,12 +230,13 @@ def update_my_profile(
     "/{patient_id:int}",
     response_model=PacienteResponse,
     summary="Actualizar perfil del paciente",
-    description="Actualiza perfil por id_paciente usando la estructura vigente de PACIENTES."
+    description="Actualiza perfil por id_paciente usando la estructura vigente de PACIENTES.",
+    dependencies=[Depends(RequireRole(["Recepcionista", "Talento Humano"]))]
 )
 def update_patient_profile(
     patient_id: int,
     profile_update: PacienteProfileUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_audit),
 ):
     """
     Campos editables:
