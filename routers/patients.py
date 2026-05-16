@@ -59,7 +59,7 @@ def _to_patient_response(paciente) -> PacienteResponse:
 )
 def create_patient(
     patient_data: PacienteCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_audit),
 ):
     """
     Ejemplo de inserción (request body):
