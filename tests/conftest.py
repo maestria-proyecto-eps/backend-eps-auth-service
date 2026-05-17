@@ -20,7 +20,7 @@ os.environ.setdefault("JWT_ALGORITHM", "HS256")
 
 from models import Base, Paciente, Persona, Recepcionista, Role, Usuario
 from routers import patients as patients_router
-from db.session import get_db
+from db.session import get_db, get_db_audit
 from core.dependencias import get_usuario_actual
 
 TEST_DATABASE_URL = "sqlite://"
@@ -34,13 +34,15 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 
 def _seed_roles(db):
+    # Nombres deben coincidir EXACTAMENTE con los strings usados en RequireRole(["..."])
+    # del router: "Recepcionista", "Talento Humano", "Paciente", "Administrador"
     roles = [
-        Role(id_rol=1, nombre_rol="medico"),
-        Role(id_rol=2, nombre_rol="paciente"),
-        Role(id_rol=3, nombre_rol="farmaceuta"),
-        Role(id_rol=4, nombre_rol="enfermero"),
-        Role(id_rol=5, nombre_rol="talento_humano"),
-        Role(id_rol=6, nombre_rol="recepcionista"),
+        Role(id_rol=1, nombre_rol="Médico"),
+        Role(id_rol=2, nombre_rol="Paciente"),
+        Role(id_rol=3, nombre_rol="Farmaceuta"),
+        Role(id_rol=4, nombre_rol="Enfermero"),
+        Role(id_rol=5, nombre_rol="Talento Humano"),
+        Role(id_rol=6, nombre_rol="Recepcionista"),
         Role(id_rol=7, nombre_rol="Administrador"),
     ]
     db.add_all(roles)
@@ -132,7 +134,7 @@ def create_patient_record(
     return paciente
 
 
-def make_mock_usuario(db_session, rol_nombre: str = "recepcionista", id_rol: int = 6):
+def make_mock_usuario(db_session, rol_nombre: str = "Recepcionista", id_rol: int = 6):
     """
     Retorna un objeto Usuario real desde la DB de tests con su rol cargado.
     Si no existe un usuario con ese rol, construye uno en memoria sin persistirlo.
@@ -183,12 +185,13 @@ def client(db_session):
         finally:
             db.close()
 
+    # get_db_audit también debe usar la misma DB de tests, si no usa la de producción
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db_audit] = override_get_db
 
-    # FIX: usar el recepcionista seedeado (rol 6) en lugar de buscar un paciente
-    # que todavía no existe cuando arranca el fixture.
+    # Retorna un recepcionista con rol "Recepcionista" (mayúscula exacta del router)
     def override_get_usuario_actual():
-        return make_mock_usuario(db_session, rol_nombre="recepcionista", id_rol=6)
+        return make_mock_usuario(db_session, rol_nombre="Recepcionista", id_rol=6)
 
     app.dependency_overrides[get_usuario_actual] = override_get_usuario_actual
 
