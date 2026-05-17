@@ -185,13 +185,44 @@ def client(db_session):
         finally:
             db.close()
 
-    # get_db_audit también debe usar la misma DB de tests, si no usa la de producción
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_db_audit] = override_get_db
 
-    # Retorna un recepcionista con rol "Recepcionista" (mayúscula exacta del router)
+    # Retorna un recepcionista con rol "Recepcionista" — sirve para la mayoría de endpoints
     def override_get_usuario_actual():
         return make_mock_usuario(db_session, rol_nombre="Recepcionista", id_rol=6)
+
+    app.dependency_overrides[get_usuario_actual] = override_get_usuario_actual
+
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+def client_paciente(db_session):
+    """
+    Fixture igual a `client` pero con usuario autenticado como Paciente.
+    Necesario para endpoints con RequireRole(["Paciente"]):
+      GET  /api/patients/me
+      PUT  /api/patients/me/profile
+    """
+    app = FastAPI()
+    app.include_router(patients_router.router)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db_audit] = override_get_db
+
+    def override_get_usuario_actual():
+        return make_mock_usuario(db_session, rol_nombre="Paciente", id_rol=2)
 
     app.dependency_overrides[get_usuario_actual] = override_get_usuario_actual
 
