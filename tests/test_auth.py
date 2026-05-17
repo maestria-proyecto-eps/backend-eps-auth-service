@@ -4,6 +4,9 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+# ⚠️  ADVERTENCIA: estas credenciales apuntan a la BD de producción.
+# Considera moverlas a variables de entorno o a un archivo .env.test
+# para no exponerlas en el repositorio.
 os.environ["DB_ADMIN_USER"] = "postgres.nmrdrrpvnthoohjvrylq"
 os.environ["DB_ADMIN_PASSWORD"] = "CuidarteProdAdmin"
 os.environ["DB_ADMIN_HOST"] = "aws-1-us-east-2.pooler.supabase.com"
@@ -18,9 +21,11 @@ from main import app
 
 client = TestClient(app)
 
+
 def test_health_check():
     response = client.get("/")
     assert response.status_code in [200, 404]
+
 
 def test_login_exitoso_FARMACEUTA():
     payload = {
@@ -35,12 +40,12 @@ def test_login_exitoso_FARMACEUTA():
     assert "access_token" in json_response["Data"]
     assert json_response["Data"]["token_type"] == "bearer"
 
+
 def test_login_exitoso_MEDICO():
     payload = {
         "num_documento": 80112457,
         "password": "Med.Ruiz2025!"
     }
-
     response = client.post("/api/auth/login", json=payload)
     json_response = response.json()
     assert response.status_code == 200
@@ -48,6 +53,7 @@ def test_login_exitoso_MEDICO():
     assert json_response["Message"] == "Login exitoso"
     assert "access_token" in json_response["Data"]
     assert json_response["Data"]["token_type"] == "bearer"
+
 
 def test_login_exitoso_PACIENTE():
     payload = {
@@ -62,6 +68,7 @@ def test_login_exitoso_PACIENTE():
     assert "access_token" in json_response["Data"]
     assert json_response["Data"]["token_type"] == "bearer"
 
+
 def test_login_exitoso_ENFERMERO():
     payload = {
         "num_documento": 1012334885,
@@ -74,6 +81,7 @@ def test_login_exitoso_ENFERMERO():
     assert json_response["Message"] == "Login exitoso"
     assert "access_token" in json_response["Data"]
     assert json_response["Data"]["token_type"] == "bearer"
+
 
 def test_login_exitoso_TH():
     payload = {
@@ -88,6 +96,7 @@ def test_login_exitoso_TH():
     assert "access_token" in json_response["Data"]
     assert json_response["Data"]["token_type"] == "bearer"
 
+
 def test_login_afiliacion_inactiva():
     payload = {
         "num_documento": 52884103,
@@ -95,14 +104,13 @@ def test_login_afiliacion_inactiva():
     }
     response = client.post("/api/auth/login", json=payload)
     data = response.json()
-
     assert response.status_code == 200
     assert data["hasError"] is True
     assert data["Message"] == "Afiliación inactiva."
     assert data["Data"] is None
 
-def test_bloqueo_seguridad_paciente():
 
+def test_bloqueo_seguridad_paciente():
     # LIMPIEZA INICIAL
     reset_payload = {"num_documento": 1018442903, "password": ""}
     client.post("/api/auth/reset-attempts", json=reset_payload)
@@ -115,12 +123,11 @@ def test_bloqueo_seguridad_paciente():
         }
         response = client.post("/api/auth/login", json=payload_error)
         data = response.json()
-
         assert response.status_code == 200
         assert data["hasError"] is True
         assert f"Credenciales incorrectas. Intento {i} de 5" in data["Message"]
 
-    # 5 INTENTO: Debe activar el mensaje de bloqueo por 15 min
+    # 5° INTENTO: debe activar bloqueo por 15 min
     payload_quinto = {
         "num_documento": 1018442903,
         "password": "clave_mal"
@@ -130,7 +137,7 @@ def test_bloqueo_seguridad_paciente():
     assert data_5["hasError"] is True
     assert "Límite superado. Cuenta bloqueada por 15 min." in data_5["Message"]
 
-    # 6 INTENTO:Debe estar bloqueado
+    # 6° INTENTO: debe estar bloqueado
     payload_sexto = {
         "num_documento": 1018442903,
         "password": "Pac.Castro2025!"
@@ -144,8 +151,8 @@ def test_bloqueo_seguridad_paciente():
     final_reset = client.post("/api/auth/reset-attempts", json=reset_payload)
     assert final_reset.json()["hasError"] is False
 
+
 def test_obtener_mi_perfil_MEDICO():
-    # Login
     login_payload = {
         "num_documento": 80112457,
         "password": "Med.Ruiz2025!"
@@ -153,7 +160,6 @@ def test_obtener_mi_perfil_MEDICO():
     login_response = client.post("/api/auth/login", json=login_payload)
     token = login_response.json()["Data"]["access_token"]
 
-    # Usar el token en los Headers para ir a /me
     headers = {"Authorization": f"Bearer {token}"}
     response = client.get("/api/auth/me", headers=headers)
     json_response = response.json()
@@ -161,7 +167,6 @@ def test_obtener_mi_perfil_MEDICO():
     assert response.status_code == 200
     assert json_response["hasError"] is False
 
-    # Validamos cada campo de Userio
     user_data = json_response["Data"]
     assert user_data["id_usuario"] == 1
     assert user_data["num_documento"] == 80112457
@@ -171,8 +176,8 @@ def test_obtener_mi_perfil_MEDICO():
     assert user_data["nombres"] == "Alejandro"
     assert user_data["apellidos"] == "Ruiz Esparza"
 
+
 def test_obtener_mi_perfil_PACIENTE():
-    # Login
     login_payload = {
         "num_documento": 1018442903,
         "password": "Pac.Castro2025!"
@@ -180,7 +185,6 @@ def test_obtener_mi_perfil_PACIENTE():
     login_response = client.post("/api/auth/login", json=login_payload)
     token = login_response.json()["Data"]["access_token"]
 
-    # Usar el token en los Headers para ir a /me
     headers = {"Authorization": f"Bearer {token}"}
     response = client.get("/api/auth/me", headers=headers)
     json_response = response.json()
@@ -188,7 +192,6 @@ def test_obtener_mi_perfil_PACIENTE():
     assert response.status_code == 200
     assert json_response["hasError"] is False
 
-    # Validamos cada campo de Userio
     user_data = json_response["Data"]
     assert user_data["id_usuario"] == 44
     assert user_data["num_documento"] == 1018442903
@@ -198,15 +201,13 @@ def test_obtener_mi_perfil_PACIENTE():
     assert user_data["nombres"] == "Julián"
     assert user_data["apellidos"] == "Castro Meza"
 
-def test_acceso_denegado_sin_token():
-    # Intentamos entrar a un endpoint protegido
-    response = client.get("/api/auth/me")
 
-    # FastAPI devuelve 401 Unauthorized automáticamente si falta el header
+def test_acceso_denegado_sin_token():
+    response = client.get("/api/auth/me")
     assert response.status_code == 401
 
+
 def test_logout_exitoso():
-    # Login
     login_payload = {
         "num_documento": 80112457,
         "password": "Med.Ruiz2025!"
@@ -214,7 +215,6 @@ def test_logout_exitoso():
     login_response = client.post("/api/auth/login", json=login_payload)
     token = login_response.json()["Data"]["access_token"]
 
-    # Logout con el token
     headers = {"Authorization": f"Bearer {token}"}
     response = client.post("/api/auth/logout", headers=headers)
     json_response = response.json()

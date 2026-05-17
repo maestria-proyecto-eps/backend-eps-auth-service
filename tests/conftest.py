@@ -41,6 +41,7 @@ def _seed_roles(db):
         Role(id_rol=4, nombre_rol="enfermero"),
         Role(id_rol=5, nombre_rol="talento_humano"),
         Role(id_rol=6, nombre_rol="recepcionista"),
+        Role(id_rol=7, nombre_rol="Administrador"),
     ]
     db.add_all(roles)
     db.commit()
@@ -131,6 +132,32 @@ def create_patient_record(
     return paciente
 
 
+def make_mock_usuario(db_session, rol_nombre: str = "recepcionista", id_rol: int = 6):
+    """
+    Retorna un objeto Usuario real desde la DB de tests con su rol cargado.
+    Si no existe un usuario con ese rol, construye uno en memoria sin persistirlo.
+    """
+    user = db_session.query(Usuario).filter(Usuario.fk_id_rol == id_rol).first()
+    if user is not None:
+        # Cargar el rol manualmente si SQLite no lo carga por lazy loading
+        if not hasattr(user, "rol") or user.rol is None:
+            user.rol = db_session.query(Role).filter(Role.id_rol == id_rol).first()
+        return user
+
+    # Fallback: objeto en memoria (no persistido) para que RequireRole no explote
+    rol = db_session.query(Role).filter(Role.id_rol == id_rol).first()
+    fallback = Usuario(
+        id_usuario=9999,
+        num_documento=9999,
+        password="x",
+        fk_id_rol=id_rol,
+        estado=1,
+        intentos_login=0,
+    )
+    fallback.rol = rol
+    return fallback
+
+
 @pytest.fixture(scope="function")
 def db_session():
     Base.metadata.drop_all(bind=engine)
@@ -158,12 +185,14 @@ def client(db_session):
 
     app.dependency_overrides[get_db] = override_get_db
 
+    # FIX: usar el recepcionista seedeado (rol 6) en lugar de buscar un paciente
+    # que todavía no existe cuando arranca el fixture.
     def override_get_usuario_actual():
-        return db_session.query(Usuario).filter(Usuario.fk_id_rol == 2).first()
+        return make_mock_usuario(db_session, rol_nombre="recepcionista", id_rol=6)
 
     app.dependency_overrides[get_usuario_actual] = override_get_usuario_actual
+
     try:
         yield TestClient(app)
     finally:
         app.dependency_overrides.clear()
-
