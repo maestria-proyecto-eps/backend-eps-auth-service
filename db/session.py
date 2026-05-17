@@ -4,6 +4,11 @@ from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
 import os
 
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+from core.auth_utils import get_current_user_id
+
 load_dotenv()
 
 Base = declarative_base()
@@ -45,8 +50,32 @@ def _get_session_local():
 
 # Dependencia para los endpoints de FastAPI
 def get_db():
-    db = _get_session_local()()
+    db: Session = _get_session_local()()
     try:
         yield db
+        db.commit()       
+    except Exception:
+        db.rollback() 
+        raise
+    finally:
+        db.close()
+        
+def get_db_audit(
+    user_id: int = Depends(get_current_user_id)
+):
+    db: Session = _get_session_local()()
+
+    try:
+        db.execute(
+            text("SET LOCAL my.app_user_id = :uid"),
+            {"uid": str(user_id)}
+        )
+        yield db
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
     finally:
         db.close()

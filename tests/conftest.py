@@ -20,7 +20,7 @@ os.environ.setdefault("JWT_ALGORITHM", "HS256")
 
 from models import Base, Paciente, Persona, Recepcionista, Role, Usuario
 from routers import patients as patients_router
-from db.session import get_db
+from db.session import get_db, get_db_audit
 from core.dependencias import get_usuario_actual
 
 TEST_DATABASE_URL = "sqlite://"
@@ -34,13 +34,16 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 
 def _seed_roles(db):
+    # Nombres deben coincidir EXACTAMENTE con los strings usados en RequireRole(["..."])
+    # del router: "Recepcionista", "Talento Humano", "Paciente", "Administrador"
     roles = [
-        Role(id_rol=1, nombre_rol="medico"),
-        Role(id_rol=2, nombre_rol="paciente"),
-        Role(id_rol=3, nombre_rol="farmaceuta"),
-        Role(id_rol=4, nombre_rol="enfermero"),
-        Role(id_rol=5, nombre_rol="talento_humano"),
-        Role(id_rol=6, nombre_rol="recepcionista"),
+        Role(id_rol=1, nombre_rol="Médico"),
+        Role(id_rol=2, nombre_rol="Paciente"),
+        Role(id_rol=3, nombre_rol="Farmaceuta"),
+        Role(id_rol=4, nombre_rol="Enfermero"),
+        Role(id_rol=5, nombre_rol="Talento Humano"),
+        Role(id_rol=6, nombre_rol="Recepcionista"),
+        Role(id_rol=7, nombre_rol="Administrador"),
     ]
     db.add_all(roles)
     db.commit()
@@ -131,6 +134,32 @@ def create_patient_record(
     return paciente
 
 
+def make_mock_usuario(db_session, rol_nombre: str = "Recepcionista", id_rol: int = 6):
+    """
+    Retorna un objeto Usuario real desde la DB de tests con su rol cargado.
+    Si no existe un usuario con ese rol, construye uno en memoria sin persistirlo.
+    """
+    user = db_session.query(Usuario).filter(Usuario.fk_id_rol == id_rol).first()
+    if user is not None:
+        # Cargar el rol manualmente si SQLite no lo carga por lazy loading
+        if not hasattr(user, "rol") or user.rol is None:
+            user.rol = db_session.query(Role).filter(Role.id_rol == id_rol).first()
+        return user
+
+    # Fallback: objeto en memoria (no persistido) para que RequireRole no explote
+    rol = db_session.query(Role).filter(Role.id_rol == id_rol).first()
+    fallback = Usuario(
+        id_usuario=9999,
+        num_documento=9999,
+        password="x",
+        fk_id_rol=id_rol,
+        estado=1,
+        intentos_login=0,
+    )
+    fallback.rol = rol
+    return fallback
+
+
 @pytest.fixture(scope="function")
 def db_session():
     Base.metadata.drop_all(bind=engine)
@@ -157,13 +186,47 @@ def client(db_session):
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db_audit] = override_get_db
 
+    # Retorna un recepcionista con rol "Recepcionista" — sirve para la mayoría de endpoints
     def override_get_usuario_actual():
-        return db_session.query(Usuario).filter(Usuario.fk_id_rol == 2).first()
+        return make_mock_usuario(db_session, rol_nombre="Recepcionista", id_rol=6)
 
     app.dependency_overrides[get_usuario_actual] = override_get_usuario_actual
+
     try:
         yield TestClient(app)
     finally:
         app.dependency_overrides.clear()
 
+
+@pytest.fixture(scope="function")
+def client_paciente(db_session):
+    """
+    Fixture igual a `client` pero con usuario autenticado como Paciente.
+    Necesario para endpoints con RequireRole(["Paciente"]):
+      GET  /api/patients/me
+      PUT  /api/patients/me/profile
+    """
+    app = FastAPI()
+    app.include_router(patients_router.router)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db_audit] = override_get_db
+
+    def override_get_usuario_actual():
+        return make_mock_usuario(db_session, rol_nombre="Paciente", id_rol=2)
+
+    app.dependency_overrides[get_usuario_actual] = override_get_usuario_actual
+
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()

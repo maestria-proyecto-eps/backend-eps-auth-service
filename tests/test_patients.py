@@ -94,7 +94,7 @@ def test_update_affiliation_status_changes_patient_state(client, db_session):
     assert response.json()["estado_afiliacion"] == "Inactivo"
 
 
-def test_get_my_profile_returns_patient_data(client, db_session):
+def test_get_my_profile_returns_patient_data(client_paciente, db_session):
     patient = create_patient_record(
         db_session,
         num_documento=2000000020,
@@ -104,7 +104,7 @@ def test_get_my_profile_returns_patient_data(client, db_session):
         num_afiliacion=2026022820,
     )
 
-    response = client.get("/api/patients/me")
+    response = client_paciente.get("/api/patients/me")
 
     assert response.status_code == 200
     body = response.json()
@@ -113,7 +113,7 @@ def test_get_my_profile_returns_patient_data(client, db_session):
     assert body["apellidos"] == "Moreno"
 
 
-def test_update_my_profile_updates_allowed_fields(client, db_session):
+def test_update_my_profile_updates_allowed_fields(client_paciente, db_session):
     patient = create_patient_record(
         db_session,
         num_documento=2000000030,
@@ -124,7 +124,7 @@ def test_update_my_profile_updates_allowed_fields(client, db_session):
         num_afiliacion=2026022830,
     )
 
-    response = client.put(
+    response = client_paciente.put(
         "/api/patients/me/profile",
         json={
             "direccion": "Carrera 50 # 10-20",
