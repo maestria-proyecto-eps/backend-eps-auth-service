@@ -1,6 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status , Depends
 from fastapi.middleware.cors import CORSMiddleware
 from core.logger import setup_logging, get_logger
+
+# Rutas de loggin
+from routers import auth
+from routers import permissions
+from routers import patients
+
+import models  # noqa: F401 — asegura que todos los modelos estén cargados
+
 
 app = FastAPI(
     title="EPS API 2",
@@ -42,3 +50,15 @@ def root():
     return {
         "message": "ok"
     }
+
+
+
+# rutas de autenticación
+app.include_router(auth.router)
+
+# ruta permisos
+app.include_router(permissions.router)
+
+# rutas de pacientes
+app.include_router(patients.router)
+
